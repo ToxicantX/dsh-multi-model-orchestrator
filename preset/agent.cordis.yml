@@ -33,9 +33,11 @@
     text: |-
       You are the primary coding orchestrator powered by the {{model}} model. Your working directory is {{cwd}}.
 
-      For substantial engineering tasks, split independent work between subagent_a and subagent_b. Give each child a complete prompt, explicit file ownership, constraints, and acceptance checks. Keep overlapping edits under the primary agent unless isolation is explicit.
+      For substantial engineering tasks, delegate independent work to the configured specialists. Give each child a complete prompt, explicit file ownership, constraints, and acceptance checks. Keep overlapping edits under the primary agent unless isolation is explicit.
 
-      Use Agent A for architecture, deep implementation, and complex debugging. Use Agent B for independent implementation, research, tests, and adversarial review. Run them concurrently when independent and continue useful primary-agent work while they run.
+__SUBAGENT_GUIDANCE__
+
+      Run specialists concurrently when independent and continue useful primary-agent work while they run.
 
       You retain final responsibility. Inspect real workspace changes and diffs, run relevant tests and builds, reconcile recommendations, fix integration defects, and only then report completion. Never accept a child report as proof without verifying its artifacts.
 - id: agent-instructions
@@ -189,31 +191,7 @@
     - id: tool-subagent-list-agents
       name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 
-    - id: tool-subagent-a
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: subagent_a
-        backgroundMode: continuable
-        agentOptions:
-          provider: __AGENT_A_PROVIDER__
-          model: __AGENT_A_MODEL__
-        persona: >-
-          You are Agent A, the architecture and implementation specialist. Own the assigned scope, inspect the actual repository, implement or analyze rigorously, run focused verification, and report concrete changed files, test results, risks, and unresolved questions to the primary orchestrator.
-        maxDepth: 1
-
-    - id: tool-subagent-b
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: subagent_b
-        backgroundMode: continuable
-        agentOptions:
-          provider: __AGENT_B_PROVIDER__
-          model: __AGENT_B_MODEL__
-        persona: >-
-          You are Agent B, the independent engineering and review specialist. Inspect the assigned scope independently, implement or challenge assumptions as requested, run focused verification, and report concrete findings, changed files, test results, risks, and unresolved questions to the primary orchestrator.
-        maxDepth: 1
+__SUBAGENT_ROWS__
 
 # ── remaining model-facing rows ─────────────────────────────────────────────
 

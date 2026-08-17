@@ -1,7 +1,7 @@
 {
   "name": "dsh-multi-model-orchestrator",
-  "version": "0.1.0",
-  "description": "Provider-neutral dual-subagent orchestrator preset for DeepSeek Harness",
+  "version": "0.2.0",
+  "description": "Provider-neutral configurable multi-subagent orchestrator preset for DeepSeek Harness",
   "type": "module",
   "license": "MIT",
   "private": false,

@@ -1,0 +1,22 @@
+{
+  "agents": [
+    {
+      "id": "architect",
+      "provider": "provider-a",
+      "model": "model-a",
+      "description": "Own architecture, deep implementation, and complex debugging."
+    },
+    {
+      "id": "researcher",
+      "provider": "provider-b",
+      "model": "model-b",
+      "description": "Research external behavior and independently test assumptions."
+    },
+    {
+      "id": "reviewer",
+      "provider": "provider-c",
+      "model": "model-c",
+      "description": "Perform adversarial review, test edge cases, and report concrete risks."
+    }
+  ]
+}

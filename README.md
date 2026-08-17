@@ -1,49 +1,88 @@
 # DSH Multi-model Orchestrator
 
-A provider-neutral [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) preset that gives one primary coding agent two independently routed subagents. It keeps provider credentials in DSH's write-only credential store and commits only provider/model references.
+A provider-neutral [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) preset that gives one primary coding agent any number of independently routed subagents. Provider credentials stay in DSH's write-only credential store; generated presets contain only provider/model references and role instructions.
 
 ## Requirements
 
 - DeepSeek Harness 0.1.0-rc.5 or newer
 - Node.js 22.19 or newer
-- Two model routes configured in **Settings > Models**
+- One model route per distinct endpoint/account, configured in **Settings > Models**
 
-Each route can use its own API key, Base URL, protocol, and model catalog. The routes may use different vendors or separate accounts/endpoints from the same vendor. API keys are never passed to this installer or written into the preset.
+Routes can use different vendors or separate accounts and endpoints from the same vendor. Multiple agents may also share one route while using the same or different model IDs. API keys are never passed to this installer or written into the preset.
+
+## Configure agents
+
+Copy `orchestrator.example.json` and edit its `agents` array. Add or remove as many entries as needed:
+
+~~~json
+{
+  "agents": [
+    {
+      "id": "architect",
+      "provider": "provider-a",
+      "model": "model-a",
+      "description": "Own architecture, deep implementation, and complex debugging."
+    },
+    {
+      "id": "reviewer",
+      "provider": "provider-b",
+      "model": "model-b",
+      "description": "Perform adversarial review, test edge cases, and report concrete risks."
+    }
+  ]
+}
+~~~
+
+Each entry generates a tool named `subagent_<id>`:
+
+- `id`: unique lowercase identifier beginning with a letter; letters, numbers, `_` and `-` are accepted.
+- `provider`: route ID created in **Settings > Models**.
+- `model`: model ID registered under that route.
+- `description`: optional single-line role instruction used as the child's persona and shown to the primary orchestrator. It is not a task label.
+
+At least one agent is required. There is no fixed agent-count limit in the installer; practical limits come from model tool-catalog size and available compute.
 
 ## Install
 
-1. In DSH, open **Settings > Models** and add two provider routes. Enter each route's API key, Base URL, protocol, and model IDs there.
-2. Clone and install:
+1. In DSH, open **Settings > Models** and create every route referenced by the JSON configuration. Enter each route's API key, Base URL, protocol, and model IDs there.
+2. Clone this repository and create your configuration:
 
 ~~~powershell
 git clone https://github.com/ToxicantX/dsh-multi-model-orchestrator.git
 cd dsh-multi-model-orchestrator
+Copy-Item orchestrator.example.json orchestrator.json
+# Edit orchestrator.json, then install:
+node src/install.mjs --config orchestrator.json
+~~~
+
+3. Refresh DSH and select **Multi-model orchestrator** as the Agent preset.
+
+Use `--force` to replace an existing installation. `DSH_HOME` is respected; otherwise the installer uses `~/.dsh`.
+
+## Legacy two-agent command
+
+The original v0.1 command remains supported:
+
+~~~powershell
 node src/install.mjs `
   --agent-a-provider provider-a --agent-a-model model-a `
   --agent-b-provider provider-b --agent-b-model model-b
 ~~~
 
-3. Refresh DSH and select **Multi-model orchestrator** as the Agent preset.
+New installations should use `--config` because it supports arbitrary counts, stable role names, and custom instructions.
 
-Use `--force` to update an existing installation. `DSH_HOME` is respected; otherwise the installer uses `~/.dsh`.
+## Updating agents and routes
 
-## Roles
+DSH captures the generated subagent list and each Provider/Model reference when the preset is mounted:
 
-- **Primary** owns planning, delegation, integration, and final verification. Its model remains selectable through the normal DSH model control.
-- **Agent A** focuses on architecture, deep implementation, and debugging.
-- **Agent B** focuses on independent implementation, research, tests, and adversarial review.
-
-The role names are intentionally provider-neutral. Edit the installed persona text when a team needs different responsibilities.
-
-## Updating routes
-
-DSH currently captures subagent Provider/Model references when the preset is mounted. API keys and Base URLs remain editable live in **Settings > Models**. To change which Provider or model Agent A/B uses, rerun the installer with the new IDs and `--force`, then refresh DSH.
+- API keys and Base URLs remain editable live in **Settings > Models**.
+- To add/remove an agent or change its ID, Provider, model, or description, update the JSON file, rerun with `--force`, and refresh DSH.
 
 ## Security
 
-- Never put API keys in `agent.cordis.yml`, command arguments, or Git.
+- Never put API keys in the JSON config, `agent.cordis.yml`, command arguments, or Git.
 - DSH Settings stores credentials separately and returns only redacted configured-state metadata to the browser.
-- Provider IDs and model IDs are not secrets and are the only route data stored by this preset.
+- Provider IDs, model IDs, and role descriptions are the only agent data stored by this preset.
 - Review `~/.dsh/.credentials.yaml` permissions or use environment-backed credentials where required by your deployment.
 
 ## Development
@@ -52,13 +91,13 @@ DSH currently captures subagent Provider/Model references when the preset is mou
 npm test
 ~~~
 
-Tests render and install the real preset, reject incomplete role mappings, and assert that output contains no API-key fields, machine-local paths, or original vendor-specific names.
+Tests cover one, three, and twelve agents; legacy compatibility; duplicate and malformed IDs; missing fields; route quoting; configuration-mode conflicts; secret/path scanning; and real preset installation.
 
 ## 中文说明
 
-这是一个通用的 DSH 双子 Agent 主控预设。先在 **设置 > 模型** 中分别创建两个 Provider 路由，并为每个路由配置独立的 API Key、Base URL、协议和模型；安装器只写入 Provider ID 与 Model ID，不读取也不保存密钥。主控模型仍可在 DSH 原有模型选择器中配置。
+这是一个可自定义子 Agent 数量的 DSH 主控预设。编辑 `orchestrator.json` 中的 `agents` 数组即可增加或删除 Agent；每项分别配置 ID、Provider、模型和职责说明，安装后会生成 `subagent_<id>` 工具。
 
-DSH 当前会在挂载 preset 时固定子 Agent 的 Provider/Model 引用。Key 与 URL 可直接在设置页更新；如需切换 Agent A/B 所用的 Provider 或模型，请带新参数和 `--force` 重新运行安装器并刷新页面。
+每个 Provider 的 API Key、Base URL、协议和模型目录仍在 **设置 → 模型** 中安全管理。安装器只写入 Provider ID、Model ID 和职责说明，不读取或保存密钥。修改 Agent 数量或路由绑定后，使用 `--force` 重新安装并刷新 DSH。
 
 ## License
 
