@@ -20,6 +20,27 @@ DSH currently has no bundle manifest field for contributing agent presets. This 
 - Node.js 22.19 or newer
 - Provider routes configured in **Settings > Models**
 
+## Quick install from GitHub
+
+Create a local configuration file from the published example:
+
+~~~powershell
+$Config = Join-Path $HOME 'orchestrator.json'
+Invoke-WebRequest 'https://raw.githubusercontent.com/ToxicantX/dsh-multi-model-orchestrator/main/orchestrator.example.json' -OutFile $Config
+notepad $Config
+~~~
+
+Install the plugin dependency and generate the preset:
+
+~~~powershell
+dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
+dsh plugin --profile web exec dsh-orchestrator-install --config $Config --force
+~~~
+
+The plain-dependency warning is expected: DSH activates this agent-plane plugin from the generated preset rather than as a host bundle. Refresh DSH and create a new session using **Multi-model orchestrator**.
+
+When running DSH from its source checkout, replace each `dsh` command above with `pnpm dsh`.
+
 ## Configure agents
 
 Copy `orchestrator.example.json` to `orchestrator.json` and edit the `agents` array:

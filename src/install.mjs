@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { normalizeAgents } from './config.js'
 
@@ -111,7 +111,8 @@ export async function install(options, env = process.env) {
   return { target, agents }
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+// Package-manager bin shims can reach this file through a symlinked path.
+const isMain = basename(process.argv[1] ?? '') === 'install.mjs'
 if (isMain) {
   try {
     const options = parseArgs(process.argv.slice(2))
