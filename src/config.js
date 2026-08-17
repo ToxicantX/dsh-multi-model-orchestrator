@@ -8,8 +8,8 @@ function requiredString(value, label, maxLength = 512) {
   return clean
 }
 
-export function normalizeAgents(value) {
-  if (!Array.isArray(value) || value.length === 0) throw new Error('agents must be a non-empty array')
+export function normalizeAgents(value, options = {}) {
+  if (!Array.isArray(value) || (!options.allowEmpty && value.length === 0)) throw new Error('agents must be a non-empty array')
   const ids = new Set()
   return value.map((entry, index) => {
     if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) throw new Error('agents[' + index + '] must be an object')

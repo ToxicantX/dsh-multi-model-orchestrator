@@ -189,7 +189,8 @@
     - id: tool-subagent-list-agents
       name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 
-__ORCHESTRATOR_PLUGIN_ROW__
+    - id: multi-model-orchestrator
+      name: 'dsh-multi-model-orchestrator/agent'
 
 # ── remaining model-facing rows ─────────────────────────────────────────────
 

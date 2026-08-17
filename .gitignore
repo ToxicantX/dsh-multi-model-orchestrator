@@ -1,7 +1,7 @@
 node_modules/
 coverage/
 .tmp-preset/
-orchestrator.json
+lib/client.js.map
 .env
 .env.*
 !.env.example

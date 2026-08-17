@@ -1,139 +1,88 @@
 # DSH Multi-model Orchestrator
 
-A provider-neutral Cordis agent plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It mounts any number of configured `@deepseek-ai/dsh-tool-subagent` child plugins inside one agent-scoped preset.
+A DeepSeek Harness bundle for configuring any number of specialist subagents from models that already exist in DSH.
 
-## Architecture
+## What it does
 
-This package is an actual Cordis plugin:
-
-- `index.js` exports `name`, `inject`, a Schemastery `Config`, and `apply(ctx, config)`.
-- `apply` mounts one lifecycle-owned `dsh-tool-subagent` plugin per configured specialist.
-- The plugin contributes model-visible role guidance through `ctx.systemPrompt.section()`.
-- The agent preset contains one `dsh-multi-model-orchestrator` row. It does not duplicate subagent implementation rows.
-- Provider API keys and Base URLs remain in DSH **Settings > Models** and never enter this package's config.
-
-DSH currently has no bundle manifest field for contributing agent presets. This is therefore an **agent-plane plugin dependency plus an agent preset**, not a host-plane bundle. `dsh plugin add` may print that the package is a plain dependency; that is expected because the preset activates it per session.
+- Adds **Settings > Agent orchestration** to the DSH Web GUI.
+- Reads selectable Provider/Model routes from DSH's `llm.models` catalog.
+- Stores only Agent ID, Provider ID, Model ID, role description, and optional maximum output tokens.
+- Mounts one lifecycle-owned `@deepseek-ai/dsh-tool-subagent` plugin for each configured Agent.
+- Keeps API keys, Base URLs, protocols, and model discovery in DSH **Settings > Models**.
 
 ## Requirements
 
-- DeepSeek Harness 0.1.0-rc.5 or newer
+- DeepSeek Harness 0.1.0-rc.5 or a compatible newer release
 - Node.js 22.19 or newer
-- Provider routes configured in **Settings > Models**
+- At least one model configured in DSH **Settings > Models**
 
-## Quick install from GitHub
+## Install from GitHub
 
-Create a local configuration file from the published example:
-
-~~~powershell
-$Config = Join-Path $HOME 'orchestrator.json'
-Invoke-WebRequest 'https://raw.githubusercontent.com/ToxicantX/dsh-multi-model-orchestrator/main/orchestrator.example.json' -OutFile $Config
-notepad $Config
-~~~
-
-Install the plugin dependency and generate the preset:
+Install and activate the bundle in the Web profile:
 
 ~~~powershell
 dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
-dsh plugin --profile web exec dsh-orchestrator-install --config $Config --force
 ~~~
 
-The plain-dependency warning is expected: DSH activates this agent-plane plugin from the generated preset rather than as a host bundle. Refresh DSH and create a new session using **Multi-model orchestrator**.
+Install the fixed Agent preset once:
 
-When running DSH from its source checkout, replace each `dsh` command above with `pnpm dsh`.
-
-## Configure agents
-
-Copy `orchestrator.example.json` to `orchestrator.json` and edit the `agents` array:
-
-~~~json
-{
-  "agents": [
-    {
-      "id": "architect",
-      "provider": "provider-a",
-      "model": "model-a",
-      "description": "Own architecture, deep implementation, and complex debugging."
-    },
-    {
-      "id": "reviewer",
-      "provider": "provider-b",
-      "model": "model-b",
-      "description": "Perform adversarial review and test edge cases.",
-      "maxTokens": 8192
-    }
-  ]
-}
+~~~powershell
+dsh plugin --profile web exec dsh-orchestrator-install --force
 ~~~
 
-Each entry becomes `subagent_<id>`. IDs must be unique lowercase identifiers beginning with a letter. `provider` and `model` reference routes from DSH Settings. `description` is the child's persona and the role shown to the primary agent.
+Restart DSH Web after first installation, refresh the browser, then:
 
-## Install
+1. Open **Settings > Agent orchestration**.
+2. Add any number of Agents.
+3. Select an existing DSH model for each Agent.
+4. Save and create a new session with **Multi-model orchestrator**.
 
-Clone the repository:
+When running DSH from its source checkout, replace `dsh` with `pnpm dsh` in both commands.
+
+## Updating Agents
+
+Agent configuration is saved in DSH's `multi-model-orchestrator` Settings namespace. Saving touches the fixed preset composition stamp so DSH creates a new preset generation for later sessions. Existing sessions retain the Agent roster and models they started with.
+
+You do not need to rerun the installer after adding, removing, or changing Agents.
+
+## Architecture
+
+The package has three runtime faces:
+
+- `host.js` is the bundle row. It owns the Settings schema and publishes the current Agent configuration as a host service.
+- `agent.js` is mounted by the fixed Agent preset. It snapshots the configured roster and mounts the corresponding subagent tools.
+- `lib/client.js` is the DSH client-plugin bundle. It contributes the settings section, reads the model catalog through `llm.models`, and reads/writes only `{ agents }` through the plugin-owned same-origin settings endpoint.
+
+DSH currently has no bundle manifest field for contributing an Agent preset, so the package installer copies one fixed thin preset into `$DSH_HOME/.agent-presets/multi-model-orchestrator`. This is a one-time installation step, not Agent configuration generation.
+
+## Local development
 
 ~~~powershell
 git clone https://github.com/ToxicantX/dsh-multi-model-orchestrator.git
 cd dsh-multi-model-orchestrator
 pnpm install
-Copy-Item orchestrator.example.json orchestrator.json
+pnpm bundle
+pnpm test
 ~~~
 
-Install the plugin dependency into the Web profile. From a DSH source checkout:
+Install the checkout into a local DSH source profile:
 
 ~~~powershell
 pnpm dsh plugin --profile web add -w D:/path/to/dsh-multi-model-orchestrator
+pnpm dsh plugin --profile web exec dsh-orchestrator-install --force
 ~~~
 
-With a globally installed `dsh` command:
+## Security boundary
 
-~~~powershell
-dsh plugin --profile web add -w ./dsh-multi-model-orchestrator
-~~~
+This package never asks for, stores, logs, or sends API keys and Base URLs. Provider credentials and endpoints remain owned by DSH's model and credential services. The settings client saves only route references and Agent metadata.
 
-Generate the agent-scoped preset:
-
-~~~powershell
-node src/install.mjs --config orchestrator.json --force
-~~~
-
-Refresh DSH and select **Multi-model orchestrator** for a new session. Existing sessions keep the composition they started with.
-
-## Plugin configuration
-
-The Cordis schema also supports these preset-row fields:
-
-~~~yaml
-config:
-  transport: spawn
-  backgroundMode: continuable
-  maxDepth: 1
-  agents: []
-~~~
-
-The installer emits only `agents` and uses the schema defaults shown above. Advanced deployments may edit the installed preset row directly.
-
-## Security
-
-- Never put API keys in `orchestrator.json`, the preset, command arguments, or Git.
-- DSH stores keys through its credential service and exposes only redacted state to the browser.
-- This preset is executable agent-plane composition and carries user-level trust.
-- Pin a Git commit when installing directly from GitHub.
-
-## Development
-
-~~~shell
-pnpm install
-pnpm test
-pnpm pack
-~~~
-
-Tests cover the Cordis export contract, Schemastery defaults, dynamic child-plugin configs, prompt registration cleanup, invalid config, one/three/twelve agents, legacy CLI compatibility, and plugin-backed preset generation.
+Pin a Git commit when a deployment requires reproducible GitHub installation.
 
 ## 中文说明
 
-本项目现在是标准 Cordis Agent 插件，不再只是展开 YAML 的模板生成器。插件导出 `Config` 与 `apply`，并在每个 session 的 agent scope 中创建和回收动态子 Agent 插件。preset 只保留一条插件挂载配置。
+安装后只需在 DSH 的 **设置 > Agent 编排** 中添加 Agent，并从 DSH 已配置好的模型中选择。插件不再使用 Agent JSON，也不需要在修改 Agent 后重新生成 preset。
 
-API Key、Base URL、协议和模型目录仍在 DSH 的 **设置 → 模型** 中管理。修改 Agent 数量或路由后，重新执行带 `--force` 的安装命令，并新建 session。
+API Key、Base URL、接口协议和模型发现继续由 DSH 的 **设置 > 模型** 管理。本插件只保存 Provider/Model 引用、Agent ID、职责描述和可选 Token 上限。保存后新建 Session 即可使用新的 Agent 配置，已有 Session 不受影响。
 
 ## License
 

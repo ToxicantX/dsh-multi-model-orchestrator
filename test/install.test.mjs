@@ -1,82 +1,108 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
+import packageJson from '../package.json' with { type: 'json' }
+import hostPlugin, { Config as HostConfig, ORCHESTRATOR_SETTINGS_ENDPOINT, ORCHESTRATOR_SETTINGS_NAMESPACE, AgentSettingsSchema, SettingsSchema, MultiModelOrchestratorSettings, apply as applyHost, inject as hostInject, settingsRoute } from '../host.js'
 import { normalizeAgents } from '../src/config.js'
-import { install, parseArgs, renderTemplate, resolveAgents } from '../src/install.mjs'
+import { install, parseArgs } from '../src/install.mjs'
 
-const agent = (id, overrides = {}) => ({
-  id,
-  provider: 'provider-' + id,
-  model: 'model-' + id,
-  description: 'Own the ' + id + ' specialist role.',
-  ...overrides,
-})
+const agent = (id, overrides = {}) => ({ id, provider: 'provider-' + id, model: 'model-' + id, description: 'Own ' + id + '.', ...overrides })
 
-const template = '__ORCHESTRATOR_PLUGIN_ROW__\n'
-
-test('parses config and preserves legacy route options', () => {
-  assert.deepEqual(parseArgs(['--config', 'agents.json', '--force']), {
-    presetId: 'multi-model-orchestrator', force: true, config: 'agents.json',
-  })
-  assert.deepEqual(parseArgs(['--agent-a-provider', 'alpha', '--agent-a-model', 'model-a', '--agent-b-provider', 'beta', '--agent-b-model', 'model-b']), {
-    presetId: 'multi-model-orchestrator', force: false, agentAProvider: 'alpha', agentAModel: 'model-a', agentBProvider: 'beta', agentBModel: 'model-b',
-  })
-})
-
-test('normalizes one or many agents and supplies a default persona', () => {
-  const one = normalizeAgents([{ id: 'solo', provider: 'route', model: 'model' }])
-  assert.equal(one.length, 1)
-  assert.match(one[0].description, /solo specialist/)
-  assert.equal(normalizeAgents(Array.from({ length: 12 }, (_, index) => agent('worker-' + index))).length, 12)
-})
-
-test('rejects empty, malformed, duplicate, and incomplete agents', () => {
-  assert.throws(() => normalizeAgents([]), /non-empty array/)
-  assert.throws(() => normalizeAgents([agent('Bad ID')]), /Invalid agent id/)
-  assert.throws(() => normalizeAgents([agent('same'), agent('same')]), /Duplicate agent id/)
-  assert.throws(() => normalizeAgents([{ id: 'missing', provider: 'route' }]), /model/)
-  assert.throws(() => normalizeAgents([agent('newline', { provider: 'route\ninjected' })]), /Invalid newline/)
-  assert.throws(() => normalizeAgents([agent('tokens', { maxTokens: 0 })]), /positive safe integer/)
-})
-
-test('renders one plugin row containing all configured agents', () => {
-  const agents = [
-    agent('architect', { provider: 'vendor:custom', model: 'model/a' }),
-    agent('researcher'),
-    agent('reviewer', { description: 'Review: edge cases # without YAML injection.' }),
-  ]
-  const output = renderTemplate(template, agents)
-  assert.equal((output.match(/name: 'dsh-multi-model-orchestrator'/gu) ?? []).length, 1)
-  assert.equal((output.match(/^          - id:/gmu) ?? []).length, 3)
-  assert.match(output, /provider: "vendor:custom"/)
-  assert.match(output, /model: "model\/a"/)
-  assert.match(output, /description: "Review: edge cases # without YAML injection\."/)
-  assert.doesNotMatch(output, /__(?:ORCHESTRATOR|SUBAGENT)_/u)
-})
-
-test('resolves legacy A/B options and rejects mixed configuration modes', async () => {
-  const legacy = await resolveAgents({ agentAProvider: 'alpha', agentAModel: 'one', agentBProvider: 'beta', agentBModel: 'two' })
-  assert.deepEqual(legacy.map(entry => entry.id), ['a', 'b'])
-  await assert.rejects(resolveAgents({ config: 'agents.json', agentAProvider: 'alpha' }), /cannot be combined/)
-  await assert.rejects(resolveAgents({ agentAProvider: 'alpha' }), /all four legacy/)
-})
-
-test('installs a plugin-backed three-agent preset without secrets or local paths', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-'))
-  try {
-    const config = join(root, 'agents.json')
-    const target = join(root, 'preset')
-    await writeFile(config, JSON.stringify({ agents: [agent('architect'), agent('researcher'), agent('reviewer')] }))
-    const result = await install({ config, target })
-    const output = await readFile(join(target, 'agent.cordis.yml'), 'utf8')
-    assert.equal(result.agents.length, 3)
-    assert.equal((output.match(/name: 'dsh-multi-model-orchestrator'/gu) ?? []).length, 1)
-    assert.equal((output.match(/^          - id:/gmu) ?? []).length, 3)
-    assert.match(output, /id: "reviewer"/)
-    assert.doesNotMatch(output, /toolName: subagent_|__(?:ORCHESTRATOR|SUBAGENT)_|api.?key|D:\\DevTools|gpt-5\.6|grok-4\.6|Luna MAX/iu)
-  } finally {
-    await rm(root, { recursive: true, force: true })
+function settingsContext(initial = { agents: [] }) {
+  let current = structuredClone(initial)
+  let watched
+  const registrations = []
+  const ctx = {
+    fiber: { state: 0 },
+    reflect: { provide() {} },
+    settings: { register(ns, schema, options) {
+      registrations.push({ ns, schema, options })
+      return { get: () => current, watch: callback => { watched = callback; return () => {} }, replace: async next => { const previous = current; current = structuredClone(next); await watched?.(current, previous) } }
+    } },
+    inject(_names, callback) { callback(ctx) },
+    effect(callback) { return callback() },
   }
+  return { ctx, registrations, set(next) { const previous = current; current = structuredClone(next); watched?.(current, previous) } }
+}
+
+test('installer copies exactly the fixed orchestrator preset and no agent data rows', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-install-'))
+  try {
+    const target = join(root, 'presets', 'multi-model-orchestrator')
+    const result = await install({ target, force: false })
+    assert.equal(result.target, target)
+    const output = await readFile(join(target, 'agent.cordis.yml'), 'utf8')
+    assert.equal((output.match(/^\s*- id: multi-model-orchestrator$/gmu) ?? []).length, 1)
+    assert.equal((output.match(/^\s*name: ['"]dsh-multi-model-orchestrator\/agent['"]$/gmu) ?? []).length, 1)
+    assert.doesNotMatch(output, /^\s+(?:agents|provider|model|apiKey|baseURL):/gim)
+    assert.doesNotMatch(output, /(?:API[_ ]?KEY|BASEURL|apiKey|baseURL|provider:|model:)/iu)
+    assert.equal((output.match(/dsh-multi-model-orchestrator\/agent/gu) ?? []).length, 1)
+    assert.match(await readFile(join(target, 'preset.yml'), 'utf8'), /multi-model orchestrator/iu)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('parseArgs handles fixed installer flags and rejects invalid values', () => {
+  assert.deepEqual(parseArgs([]), { presetId: 'multi-model-orchestrator', force: false })
+  assert.deepEqual(parseArgs(['--force', '--preset-id', 'custom', '--target', 'C:/tmp/preset', '--help']), { presetId: 'custom', target: 'C:/tmp/preset', force: true, help: true })
+  assert.throws(() => parseArgs(['--unknown']), /Unknown option/)
+  assert.throws(() => parseArgs(['--target']), /Missing value/)
+  assert.throws(() => parseArgs(['--preset-id', '--force']), /Missing value/)
+})
+
+test('normalizeAgents permits empty only with allowEmpty', () => {
+  assert.deepEqual(normalizeAgents([], { allowEmpty: true }), [])
+  assert.throws(() => normalizeAgents([]), /non-empty array/)
+  assert.deepEqual(normalizeAgents([agent('solo')])[0], { ...agent('solo') })
+})
+
+test('host exports a unique settings namespace and validates service snapshots', () => {
+  assert.equal(String(ORCHESTRATOR_SETTINGS_NAMESPACE), 'multi-model-orchestrator')
+  assert.equal(typeof AgentSettingsSchema, 'function')
+  assert.equal(typeof SettingsSchema, 'function')
+  assert.equal(hostPlugin, applyHost)
+  assert.deepEqual(hostPlugin.inject, hostInject)
+  assert.equal(hostPlugin.Config, HostConfig)
+  const fake = settingsContext({ agents: [agent('solo')] })
+  const service = new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath: undefined })
+  assert.deepEqual(service.currentAgents(), [agent('solo')])
+  fake.set({ agents: [] })
+  assert.deepEqual(service.currentAgents(), [])
+  fake.set({ agents: [{ id: 'bad id', provider: 'p', model: 'm' }] })
+  assert.throws(() => service.currentAgents(), /Invalid agent id/)
+  assert.equal(fake.registrations[0].ns, ORCHESTRATOR_SETTINGS_NAMESPACE)
+})
+
+test('host endpoint replaces only validated Agent settings', async () => {
+  const fake = settingsContext({ agents: [agent('before')] })
+  const service = new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath: undefined })
+  assert.deepEqual(await service.replaceAgents([agent('after')]), [agent('after')])
+  assert.equal(settingsRoute(service).path, ORCHESTRATOR_SETTINGS_ENDPOINT)
+  await assert.rejects(() => service.replaceAgents([{ id: 'bad id', provider: 'p', model: 'm' }]), /Invalid agent id/)
+})
+
+test('host onChange touches an existing preset path', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-change-'))
+  try {
+    const presetPath = join(root, 'agent.cordis.yml')
+    await writeFile(presetPath, 'fixed')
+    const before = (await stat(presetPath)).mtimeMs
+    const fake = settingsContext({ agents: [] })
+    new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath })
+    await new Promise(resolve => setTimeout(resolve, 20))
+    fake.set({ agents: [agent('new')] })
+    const after = (await stat(presetPath)).mtimeMs
+    assert.ok(after >= before)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('package declares bundle and client integration exports', () => {
+  assert.deepEqual(packageJson.dsh.bundle, { patch: './cordis.patch.yml' })
+  assert.deepEqual(packageJson.dsh.client.inject, [
+    '@deepseek-ai/dsh-client-runtime', '@deepseek-ai/dsh-client-ui-settings', '@deepseek-ai/dsh-client-locale', '@deepseek-ai/dsh-api-remotes',
+  ])
+  assert.equal(packageJson.exports['./host'], './host.js')
+  assert.equal(packageJson.exports['./agent'], './agent.js')
+  assert.equal(packageJson.exports['./client'], './lib/client.js')
 })

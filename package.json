@@ -1,6 +1,6 @@
 {
   "name": "dsh-multi-model-orchestrator",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Cordis agent plugin for configurable multi-model subagent orchestration in DeepSeek Harness",
   "type": "module",
   "license": "MIT",
@@ -10,7 +10,9 @@
   },
   "scripts": {
     "setup": "node ./src/install.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "bundle": "tsdown",
+    "watch": "tsdown --watch"
   },
   "repository": {
     "type": "git",
@@ -33,23 +35,50 @@
   "main": "./index.js",
   "exports": {
     ".": "./index.js",
+    "./host": "./host.js",
+    "./agent": "./agent.js",
+    "./client": "./lib/client.js",
     "./config": "./src/config.js",
     "./package.json": "./package.json"
   },
   "files": [
     "index.js",
+    "host.js",
+    "agent.js",
+    "cordis.patch.yml",
+    "lib/client.js",
     "src/config.js",
     "src/install.mjs",
     "preset/",
-    "orchestrator.example.json",
+    "package.json",
     "README.md",
     "LICENSE"
   ],
-  "dependencies": {
+  "peerDependencies": {
+    "@deepseek-ai/dsh-system-prompt": "^0.1.0-rc.5",
+    "react": "^18.2.0",
     "@deepseek-ai/dsh-tool-subagent": "^0.1.0-rc.5",
     "@deepseek-ai/schemastery": "^3.18.1"
   },
-  "peerDependencies": {
-    "@deepseek-ai/dsh-system-prompt": "^0.1.0-rc.5"
-  }
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-api-remotes"
+      ],
+      "platform": "web"
+    }
+  },
+  "devDependencies": {
+    "@types/react": "~18.3.1",
+    "react": "^18.2.0",
+    "tsdown": "^0.15.7",
+    "typescript": "^5.9.2"
+  },
+  "peerDependenciesMeta": {}
 }

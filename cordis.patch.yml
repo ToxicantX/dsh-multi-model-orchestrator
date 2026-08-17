@@ -1,0 +1,6 @@
+- insert:
+    - id: multi-model-orchestrator-settings
+      name: 'dsh-multi-model-orchestrator'
+      config:
+        agents: []
+        presetPath: !!js dshHomePath('.agent-presets/multi-model-orchestrator/agent.cordis.yml')
