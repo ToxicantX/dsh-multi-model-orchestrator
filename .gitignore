@@ -7,3 +7,4 @@ orchestrator.json
 !.env.example
 *.key
 *.pem
+*.tgz

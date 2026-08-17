@@ -1,7 +1,7 @@
 {
   "name": "dsh-multi-model-orchestrator",
-  "version": "0.2.0",
-  "description": "Provider-neutral configurable multi-subagent orchestrator preset for DeepSeek Harness",
+  "version": "0.3.0",
+  "description": "Cordis agent plugin for configurable multi-model subagent orchestration in DeepSeek Harness",
   "type": "module",
   "license": "MIT",
   "private": false,
@@ -29,5 +29,27 @@
     "multi-agent",
     "orchestrator",
     "agent-preset"
-  ]
+  ],
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./config": "./src/config.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "src/config.js",
+    "src/install.mjs",
+    "preset/",
+    "orchestrator.example.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@deepseek-ai/dsh-tool-subagent": "^0.1.0-rc.5",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-system-prompt": "^0.1.0-rc.5"
+  }
 }

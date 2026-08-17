@@ -3,9 +3,9 @@ import { cp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { normalizeAgents } from './config.js'
 
 const DEFAULT_PRESET_ID = 'multi-model-orchestrator'
-const AGENT_ID = /^[a-z][a-z0-9_-]{0,47}$/u
 
 function usage() {
   return [
@@ -45,38 +45,12 @@ export function parseArgs(argv) {
   return options
 }
 
-function requiredString(value, label, maxLength = 512) {
-  if (typeof value !== 'string' || value.trim() === '') throw new Error('Missing required field: ' + label)
-  const clean = value.trim()
-  if (/\r|\n|\0/u.test(clean)) throw new Error('Invalid newline in ' + label)
-  if (clean.length > maxLength) throw new Error(label + ' exceeds ' + maxLength + ' characters')
-  return clean
-}
-
-export function normalizeAgents(value) {
-  if (!Array.isArray(value) || value.length === 0) throw new Error('agents must be a non-empty array')
-  const ids = new Set()
-  return value.map((entry, index) => {
-    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) throw new Error('agents[' + index + '] must be an object')
-    const id = requiredString(entry.id, 'agents[' + index + '].id', 48)
-    if (!AGENT_ID.test(id)) throw new Error('Invalid agent id: ' + id)
-    if (ids.has(id)) throw new Error('Duplicate agent id: ' + id)
-    ids.add(id)
-    const provider = requiredString(entry.provider, 'agents[' + index + '].provider')
-    const model = requiredString(entry.model, 'agents[' + index + '].model')
-    const fallback = 'You are the ' + id + ' specialist. Own the assigned scope, inspect the actual repository, work rigorously, run focused verification, and report concrete results, risks, and unresolved questions to the primary orchestrator.'
-    const description = entry.description === undefined ? fallback : requiredString(entry.description, 'agents[' + index + '].description', 2000)
-    return { id, provider, model, description }
-  })
-}
-
 function legacyAgents(options) {
   const fields = ['agentAProvider', 'agentAModel', 'agentBProvider', 'agentBModel']
-  const present = fields.filter(key => options[key] !== undefined)
-  if (present.length !== fields.length) throw new Error('Use --config, or provide all four legacy Agent A/B route options')
+  if (fields.filter(key => options[key] !== undefined).length !== fields.length) throw new Error('Use --config, or provide all four legacy Agent A/B route options')
   return [
-    { id: 'a', provider: options.agentAProvider, model: options.agentAModel, description: 'You are Agent A, the architecture and implementation specialist. Own the assigned scope, inspect the actual repository, implement or analyze rigorously, run focused verification, and report concrete changed files, test results, risks, and unresolved questions to the primary orchestrator.' },
-    { id: 'b', provider: options.agentBProvider, model: options.agentBModel, description: 'You are Agent B, the independent engineering and review specialist. Inspect the assigned scope independently, implement or challenge assumptions as requested, run focused verification, and report concrete findings, changed files, test results, risks, and unresolved questions to the primary orchestrator.' },
+    { id: 'a', provider: options.agentAProvider, model: options.agentAModel, description: 'You are Agent A, the architecture and implementation specialist. Own the assigned scope, inspect the actual repository, implement or analyze rigorously, run focused verification, and report concrete results to the primary orchestrator.' },
+    { id: 'b', provider: options.agentBProvider, model: options.agentBModel, description: 'You are Agent B, the independent engineering and review specialist. Challenge assumptions, test edge cases, and report concrete risks to the primary orchestrator.' },
   ]
 }
 
@@ -95,32 +69,29 @@ export async function resolveAgents(options) {
 
 function yamlString(value) { return JSON.stringify(value) }
 
-function renderAgentRows(agents) {
-  return agents.map(agent => [
-    '    - id: tool-subagent-' + agent.id,
-    "      name: '@deepseek-ai/dsh-tool-subagent'",
+function renderPluginRow(agents) {
+  const rows = [
+    '    - id: multi-model-orchestrator',
+    "      name: 'dsh-multi-model-orchestrator'",
     '      config:',
-    '        provider: spawn',
-    '        toolName: subagent_' + agent.id,
-    '        backgroundMode: continuable',
-    '        agentOptions:',
-    '          provider: ' + yamlString(agent.provider),
-    '          model: ' + yamlString(agent.model),
-    '        persona: ' + yamlString(agent.description),
-    '        maxDepth: 1',
-  ].join('\n')).join('\n\n')
-}
-
-function renderGuidance(agents) {
-  return ['      Available specialists:', ...agents.map(agent => '      - subagent_' + agent.id + ': ' + agent.description)].join('\n')
+    '        agents:',
+  ]
+  for (const agent of agents) {
+    rows.push(
+      '          - id: ' + yamlString(agent.id),
+      '            provider: ' + yamlString(agent.provider),
+      '            model: ' + yamlString(agent.model),
+      '            description: ' + yamlString(agent.description),
+      ...(agent.maxTokens === undefined ? [] : ['            maxTokens: ' + agent.maxTokens]),
+    )
+  }
+  return rows.join('\n')
 }
 
 export function renderTemplate(source, input) {
   const agents = normalizeAgents(input)
-  const output = source
-    .replace('__SUBAGENT_GUIDANCE__', renderGuidance(agents))
-    .replace('__SUBAGENT_ROWS__', renderAgentRows(agents))
-  if (/__SUBAGENT_(?:GUIDANCE|ROWS)__/u.test(output)) throw new Error('Unresolved template token')
+  const output = source.replace('__ORCHESTRATOR_PLUGIN_ROW__', renderPluginRow(agents))
+  if (/__(?:ORCHESTRATOR|SUBAGENT)_[A-Z_]+__/u.test(output)) throw new Error('Unresolved template token')
   return output
 }
 
@@ -128,7 +99,7 @@ export async function install(options, env = process.env) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
   const dshHome = env.DSH_HOME || join(homedir(), '.dsh')
   const presetId = options.presetId || DEFAULT_PRESET_ID
-  if (!/^[a-z0-9][a-z0-9._-]*$/iu.test(presetId)) throw new Error('Invalid preset id: ' + presetId)
+  if (!/^[a-z0-9][a-z0-9-]*$/u.test(presetId)) throw new Error('Invalid preset id: ' + presetId)
   const target = resolve(options.target || join(dshHome, '.agent-presets', presetId))
   const source = await readFile(join(root, 'preset', 'agent.cordis.yml'), 'utf8')
   const agents = await resolveAgents(options)
@@ -146,8 +117,8 @@ if (isMain) {
     const options = parseArgs(process.argv.slice(2))
     if (options.help) { console.log(usage()); process.exit(0) }
     const result = await install(options)
-    console.log('Installed multi-model orchestrator with ' + result.agents.length + ' subagent(s) at ' + result.target)
-    console.log('Configure each provider API key and Base URL in DSH Settings > Models, then select this preset.')
+    console.log('Installed plugin-backed orchestrator with ' + result.agents.length + ' subagent(s) at ' + result.target)
+    console.log('The dsh-multi-model-orchestrator package must also be installed in the active DSH profile.')
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
     console.error(usage())

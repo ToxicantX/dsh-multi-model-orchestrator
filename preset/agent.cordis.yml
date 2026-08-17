@@ -35,9 +35,7 @@
 
       For substantial engineering tasks, delegate independent work to the configured specialists. Give each child a complete prompt, explicit file ownership, constraints, and acceptance checks. Keep overlapping edits under the primary agent unless isolation is explicit.
 
-__SUBAGENT_GUIDANCE__
-
-      Run specialists concurrently when independent and continue useful primary-agent work while they run.
+      The multi-model orchestrator plugin publishes the configured specialist roster and delegation policy for this session.
 
       You retain final responsibility. Inspect real workspace changes and diffs, run relevant tests and builds, reconcile recommendations, fix integration defects, and only then report completion. Never accept a child report as proof without verifying its artifacts.
 - id: agent-instructions
@@ -191,7 +189,7 @@ __SUBAGENT_GUIDANCE__
     - id: tool-subagent-list-agents
       name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 
-__SUBAGENT_ROWS__
+__ORCHESTRATOR_PLUGIN_ROW__
 
 # ── remaining model-facing rows ─────────────────────────────────────────────
 

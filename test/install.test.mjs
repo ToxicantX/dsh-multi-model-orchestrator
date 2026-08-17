@@ -3,7 +3,8 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
-import { install, normalizeAgents, parseArgs, renderTemplate, resolveAgents } from '../src/install.mjs'
+import { normalizeAgents } from '../src/config.js'
+import { install, parseArgs, renderTemplate, resolveAgents } from '../src/install.mjs'
 
 const agent = (id, overrides = {}) => ({
   id,
@@ -13,13 +14,7 @@ const agent = (id, overrides = {}) => ({
   ...overrides,
 })
 
-const template = [
-  '    text: |-',
-  '__SUBAGENT_GUIDANCE__',
-  '  config:',
-  '__SUBAGENT_ROWS__',
-  '',
-].join('\n')
+const template = '__ORCHESTRATOR_PLUGIN_ROW__\n'
 
 test('parses config and preserves legacy route options', () => {
   assert.deepEqual(parseArgs(['--config', 'agents.json', '--force']), {
@@ -43,21 +38,22 @@ test('rejects empty, malformed, duplicate, and incomplete agents', () => {
   assert.throws(() => normalizeAgents([agent('same'), agent('same')]), /Duplicate agent id/)
   assert.throws(() => normalizeAgents([{ id: 'missing', provider: 'route' }]), /model/)
   assert.throws(() => normalizeAgents([agent('newline', { provider: 'route\ninjected' })]), /Invalid newline/)
+  assert.throws(() => normalizeAgents([agent('tokens', { maxTokens: 0 })]), /positive safe integer/)
 })
 
-test('renders exactly one tool row per configured agent with quoted routes', () => {
+test('renders one plugin row containing all configured agents', () => {
   const agents = [
     agent('architect', { provider: 'vendor:custom', model: 'model/a' }),
     agent('researcher'),
     agent('reviewer', { description: 'Review: edge cases # without YAML injection.' }),
   ]
   const output = renderTemplate(template, agents)
-  assert.equal((output.match(/name: '@deepseek-ai\/dsh-tool-subagent'/gu) ?? []).length, 3)
-  assert.match(output, /toolName: subagent_architect/)
+  assert.equal((output.match(/name: 'dsh-multi-model-orchestrator'/gu) ?? []).length, 1)
+  assert.equal((output.match(/^          - id:/gmu) ?? []).length, 3)
   assert.match(output, /provider: "vendor:custom"/)
   assert.match(output, /model: "model\/a"/)
-  assert.match(output, /subagent_reviewer: Review: edge cases # without YAML injection/)
-  assert.doesNotMatch(output, /__SUBAGENT_/u)
+  assert.match(output, /description: "Review: edge cases # without YAML injection\."/)
+  assert.doesNotMatch(output, /__(?:ORCHESTRATOR|SUBAGENT)_/u)
 })
 
 test('resolves legacy A/B options and rejects mixed configuration modes', async () => {
@@ -67,7 +63,7 @@ test('resolves legacy A/B options and rejects mixed configuration modes', async 
   await assert.rejects(resolveAgents({ agentAProvider: 'alpha' }), /all four legacy/)
 })
 
-test('installs a three-agent JSON config without secrets or local paths', async () => {
+test('installs a plugin-backed three-agent preset without secrets or local paths', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-'))
   try {
     const config = join(root, 'agents.json')
@@ -76,9 +72,10 @@ test('installs a three-agent JSON config without secrets or local paths', async 
     const result = await install({ config, target })
     const output = await readFile(join(target, 'agent.cordis.yml'), 'utf8')
     assert.equal(result.agents.length, 3)
-    assert.equal((output.match(/toolName: subagent_/gu) ?? []).length, 3)
-    assert.match(output, /toolName: subagent_reviewer/)
-    assert.doesNotMatch(output, /__SUBAGENT_|api.?key|D:\\DevTools|gpt-5\.6|grok-4\.6|Luna MAX/iu)
+    assert.equal((output.match(/name: 'dsh-multi-model-orchestrator'/gu) ?? []).length, 1)
+    assert.equal((output.match(/^          - id:/gmu) ?? []).length, 3)
+    assert.match(output, /id: "reviewer"/)
+    assert.doesNotMatch(output, /toolName: subagent_|__(?:ORCHESTRATOR|SUBAGENT)_|api.?key|D:\\DevTools|gpt-5\.6|grok-4\.6|Luna MAX/iu)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

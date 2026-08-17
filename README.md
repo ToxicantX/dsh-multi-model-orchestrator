@@ -1,18 +1,28 @@
 # DSH Multi-model Orchestrator
 
-A provider-neutral [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) preset that gives one primary coding agent any number of independently routed subagents. Provider credentials stay in DSH's write-only credential store; generated presets contain only provider/model references and role instructions.
+A provider-neutral Cordis agent plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It mounts any number of configured `@deepseek-ai/dsh-tool-subagent` child plugins inside one agent-scoped preset.
+
+## Architecture
+
+This package is an actual Cordis plugin:
+
+- `index.js` exports `name`, `inject`, a Schemastery `Config`, and `apply(ctx, config)`.
+- `apply` mounts one lifecycle-owned `dsh-tool-subagent` plugin per configured specialist.
+- The plugin contributes model-visible role guidance through `ctx.systemPrompt.section()`.
+- The agent preset contains one `dsh-multi-model-orchestrator` row. It does not duplicate subagent implementation rows.
+- Provider API keys and Base URLs remain in DSH **Settings > Models** and never enter this package's config.
+
+DSH currently has no bundle manifest field for contributing agent presets. This is therefore an **agent-plane plugin dependency plus an agent preset**, not a host-plane bundle. `dsh plugin add` may print that the package is a plain dependency; that is expected because the preset activates it per session.
 
 ## Requirements
 
 - DeepSeek Harness 0.1.0-rc.5 or newer
 - Node.js 22.19 or newer
-- One model route per distinct endpoint/account, configured in **Settings > Models**
-
-Routes can use different vendors or separate accounts and endpoints from the same vendor. Multiple agents may also share one route while using the same or different model IDs. API keys are never passed to this installer or written into the preset.
+- Provider routes configured in **Settings > Models**
 
 ## Configure agents
 
-Copy `orchestrator.example.json` and edit its `agents` array. Add or remove as many entries as needed:
+Copy `orchestrator.example.json` to `orchestrator.json` and edit the `agents` array:
 
 ~~~json
 {
@@ -27,77 +37,82 @@ Copy `orchestrator.example.json` and edit its `agents` array. Add or remove as m
       "id": "reviewer",
       "provider": "provider-b",
       "model": "model-b",
-      "description": "Perform adversarial review, test edge cases, and report concrete risks."
+      "description": "Perform adversarial review and test edge cases.",
+      "maxTokens": 8192
     }
   ]
 }
 ~~~
 
-Each entry generates a tool named `subagent_<id>`:
-
-- `id`: unique lowercase identifier beginning with a letter; letters, numbers, `_` and `-` are accepted.
-- `provider`: route ID created in **Settings > Models**.
-- `model`: model ID registered under that route.
-- `description`: optional single-line role instruction used as the child's persona and shown to the primary orchestrator. It is not a task label.
-
-At least one agent is required. There is no fixed agent-count limit in the installer; practical limits come from model tool-catalog size and available compute.
+Each entry becomes `subagent_<id>`. IDs must be unique lowercase identifiers beginning with a letter. `provider` and `model` reference routes from DSH Settings. `description` is the child's persona and the role shown to the primary agent.
 
 ## Install
 
-1. In DSH, open **Settings > Models** and create every route referenced by the JSON configuration. Enter each route's API key, Base URL, protocol, and model IDs there.
-2. Clone this repository and create your configuration:
+Clone the repository:
 
 ~~~powershell
 git clone https://github.com/ToxicantX/dsh-multi-model-orchestrator.git
 cd dsh-multi-model-orchestrator
+pnpm install
 Copy-Item orchestrator.example.json orchestrator.json
-# Edit orchestrator.json, then install:
-node src/install.mjs --config orchestrator.json
 ~~~
 
-3. Refresh DSH and select **Multi-model orchestrator** as the Agent preset.
-
-Use `--force` to replace an existing installation. `DSH_HOME` is respected; otherwise the installer uses `~/.dsh`.
-
-## Legacy two-agent command
-
-The original v0.1 command remains supported:
+Install the plugin dependency into the Web profile. From a DSH source checkout:
 
 ~~~powershell
-node src/install.mjs `
-  --agent-a-provider provider-a --agent-a-model model-a `
-  --agent-b-provider provider-b --agent-b-model model-b
+pnpm dsh plugin --profile web add -w D:/path/to/dsh-multi-model-orchestrator
 ~~~
 
-New installations should use `--config` because it supports arbitrary counts, stable role names, and custom instructions.
+With a globally installed `dsh` command:
 
-## Updating agents and routes
+~~~powershell
+dsh plugin --profile web add -w ./dsh-multi-model-orchestrator
+~~~
 
-DSH captures the generated subagent list and each Provider/Model reference when the preset is mounted:
+Generate the agent-scoped preset:
 
-- API keys and Base URLs remain editable live in **Settings > Models**.
-- To add/remove an agent or change its ID, Provider, model, or description, update the JSON file, rerun with `--force`, and refresh DSH.
+~~~powershell
+node src/install.mjs --config orchestrator.json --force
+~~~
+
+Refresh DSH and select **Multi-model orchestrator** for a new session. Existing sessions keep the composition they started with.
+
+## Plugin configuration
+
+The Cordis schema also supports these preset-row fields:
+
+~~~yaml
+config:
+  transport: spawn
+  backgroundMode: continuable
+  maxDepth: 1
+  agents: []
+~~~
+
+The installer emits only `agents` and uses the schema defaults shown above. Advanced deployments may edit the installed preset row directly.
 
 ## Security
 
-- Never put API keys in the JSON config, `agent.cordis.yml`, command arguments, or Git.
-- DSH Settings stores credentials separately and returns only redacted configured-state metadata to the browser.
-- Provider IDs, model IDs, and role descriptions are the only agent data stored by this preset.
-- Review `~/.dsh/.credentials.yaml` permissions or use environment-backed credentials where required by your deployment.
+- Never put API keys in `orchestrator.json`, the preset, command arguments, or Git.
+- DSH stores keys through its credential service and exposes only redacted state to the browser.
+- This preset is executable agent-plane composition and carries user-level trust.
+- Pin a Git commit when installing directly from GitHub.
 
 ## Development
 
 ~~~shell
-npm test
+pnpm install
+pnpm test
+pnpm pack
 ~~~
 
-Tests cover one, three, and twelve agents; legacy compatibility; duplicate and malformed IDs; missing fields; route quoting; configuration-mode conflicts; secret/path scanning; and real preset installation.
+Tests cover the Cordis export contract, Schemastery defaults, dynamic child-plugin configs, prompt registration cleanup, invalid config, one/three/twelve agents, legacy CLI compatibility, and plugin-backed preset generation.
 
 ## 中文说明
 
-这是一个可自定义子 Agent 数量的 DSH 主控预设。编辑 `orchestrator.json` 中的 `agents` 数组即可增加或删除 Agent；每项分别配置 ID、Provider、模型和职责说明，安装后会生成 `subagent_<id>` 工具。
+本项目现在是标准 Cordis Agent 插件，不再只是展开 YAML 的模板生成器。插件导出 `Config` 与 `apply`，并在每个 session 的 agent scope 中创建和回收动态子 Agent 插件。preset 只保留一条插件挂载配置。
 
-每个 Provider 的 API Key、Base URL、协议和模型目录仍在 **设置 → 模型** 中安全管理。安装器只写入 Provider ID、Model ID 和职责说明，不读取或保存密钥。修改 Agent 数量或路由绑定后，使用 `--force` 重新安装并刷新 DSH。
+API Key、Base URL、协议和模型目录仍在 DSH 的 **设置 → 模型** 中管理。修改 Agent 数量或路由后，重新执行带 `--force` 的安装命令，并新建 session。
 
 ## License
 
