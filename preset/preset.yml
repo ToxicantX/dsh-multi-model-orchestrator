@@ -1,0 +1,3 @@
+name: Multi-model orchestrator
+description: A provider-neutral primary agent that delegates to two independently configured subagents.
+order: 30

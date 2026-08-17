@@ -1,0 +1,33 @@
+{
+  "name": "dsh-multi-model-orchestrator",
+  "version": "0.1.0",
+  "description": "Provider-neutral dual-subagent orchestrator preset for DeepSeek Harness",
+  "type": "module",
+  "license": "MIT",
+  "private": false,
+  "bin": {
+    "dsh-orchestrator-install": "./src/install.mjs"
+  },
+  "scripts": {
+    "setup": "node ./src/install.mjs",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ToxicantX/dsh-multi-model-orchestrator.git"
+  },
+  "homepage": "https://github.com/ToxicantX/dsh-multi-model-orchestrator#readme",
+  "bugs": {
+    "url": "https://github.com/ToxicantX/dsh-multi-model-orchestrator/issues"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "multi-agent",
+    "orchestrator",
+    "agent-preset"
+  ]
+}
