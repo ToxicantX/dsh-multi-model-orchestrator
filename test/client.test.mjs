@@ -27,4 +27,5 @@ test('settings payload contains no credential or endpoint fields', async () => {
   assert.match(bundle, /\/plugins\/dsh-multi-model-orchestrator\/settings/)
   assert.doesNotMatch(bundle, /settings[.](?:replace|describe)/)
   assert.match(bundle, /llm[.]models/)
+  assert.match(bundle, /CanvasText/)
 })

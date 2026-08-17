@@ -17,6 +17,8 @@ const card = { border: '1px solid var(--border-color, #d8dce3)', borderRadius: 8
 const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 12 }
 const field = { display: 'grid', gap: 6, minWidth: 0 }
 const control = { boxSizing: 'border-box', width: '100%', minHeight: 36, border: '1px solid var(--border-color, #c9ced8)', borderRadius: 6, padding: '7px 9px', color: 'inherit', background: 'var(--input-bg, transparent)', font: 'inherit' }
+const selectControl = { ...control, colorScheme: 'light dark' }
+const nativeOption = { color: 'CanvasText', backgroundColor: 'Canvas' }
 const actions = { display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }
 const button = { minHeight: 36, border: '1px solid var(--border-color, #c9ced8)', borderRadius: 6, padding: '7px 12px', color: 'inherit', background: 'var(--button-bg, transparent)', cursor: 'pointer' }
 const primary = { ...button, background: 'var(--accent-color, #1769e0)', borderColor: 'var(--accent-color, #1769e0)', color: '#fff' }
@@ -89,9 +91,9 @@ export function SettingsOrchestratorSection({ api, t }) {
       {agents.map((agent, index) => <div style={card} key={index}>
         <div style={grid}>
           <label style={field}><span>{t('id')}</span><input style={control} value={agent.id} maxLength={48} onChange={event => update(index, { id: event.target.value })} disabled={!writable} /></label>
-          <label style={field}><span>{t('model')}</span><select style={control} value={modelValue(agent)} onChange={event => { const [provider, model] = JSON.parse(event.target.value); update(index, { provider, model }) }} disabled={!writable}>
-            <option value={JSON.stringify(['', ''])}>{t('chooseModel')}</option>
-            {groups.map(group => <optgroup key={group.id} label={group.name}>{group.models.map(model => <option key={model.id} value={JSON.stringify([group.id, model.id])}>{model.name} ({model.id})</option>)}</optgroup>)}
+          <label style={field}><span>{t('model')}</span><select style={selectControl} value={modelValue(agent)} onChange={event => { const [provider, model] = JSON.parse(event.target.value); update(index, { provider, model }) }} disabled={!writable}>
+            <option style={nativeOption} value={JSON.stringify(['', ''])}>{t('chooseModel')}</option>
+            {groups.map(group => <optgroup style={nativeOption} key={group.id} label={group.name}>{group.models.map(model => <option style={nativeOption} key={model.id} value={JSON.stringify([group.id, model.id])}>{model.name} ({model.id})</option>)}</optgroup>)}
           </select></label>
           <label style={{ ...field, gridColumn: '1 / -1' }}><span>{t('description')}</span><textarea style={{ ...control, resize: 'vertical', minHeight: 72 }} value={agent.description} onChange={event => update(index, { description: event.target.value })} disabled={!writable} /></label>
           <label style={field}><span>{t('maxTokens')}</span><input style={control} type="number" min="1" step="1" value={agent.maxTokens ?? ''} onChange={event => update(index, { maxTokens: event.target.value === '' ? undefined : Number(event.target.value) })} disabled={!writable} /></label>
