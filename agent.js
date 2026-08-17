@@ -11,7 +11,9 @@ export function roleGuidance(agents) {
     'Configured specialists:',
     ...agents.map(agent => '- subagent_' + agent.id + ': ' + agent.description),
     '',
-    'Delegate independent work concurrently when useful. Give every specialist a standalone prompt with explicit ownership, constraints, and acceptance checks. Verify child results before integrating them.',
+    'Delegate independent work concurrently when useful. Give every specialist a standalone prompt with explicit ownership, constraints, and acceptance checks.',
+    'At each step boundary, process specialist completion notices before continuing any work that depends on them. Batch concurrently completed results, reconcile conflicts, and verify their artifacts before integration.',
+    'Do not finalize while required specialist runs are outstanding. Explicitly cancel or mark as non-blocking any specialist run you intentionally choose not to await.',
   ].join('\n')
 }
 
