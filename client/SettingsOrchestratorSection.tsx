@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { catalogOptions, cleanAgents, validateAgents } from './state.ts'
+import { catalogOptions, cleanAgents, createAgentDraft, validateAgents } from './state.ts'
 
 const SETTINGS_ENDPOINT = '/plugins/dsh-multi-model-orchestrator/settings'
 
@@ -24,7 +24,6 @@ const button = { minHeight: 36, border: '1px solid var(--border-color, #c9ced8)'
 const primary = { ...button, background: 'var(--accent-color, #1769e0)', borderColor: 'var(--accent-color, #1769e0)', color: '#fff' }
 const iconButton = { ...button, width: 36, padding: 0, fontSize: 20, lineHeight: 1 }
 
-function emptyAgent() { return { id: '', provider: '', model: '', description: '', maxTokens: undefined } }
 function modelValue(agent) { return JSON.stringify([agent.provider, agent.model]) }
 
 export function SettingsOrchestratorSection({ api, t }) {
@@ -58,11 +57,11 @@ export function SettingsOrchestratorSection({ api, t }) {
     setDirty(true); setError(null)
   }
 
-  function add() { setAgents(current => [...current, emptyAgent()]); setDirty(true); setError(null) }
+  function add() { setAgents(current => [...current, createAgentDraft()]); setDirty(true); setError(null) }
   function remove(index) { setAgents(current => current.filter((_, position) => position !== index)); setDirty(true); setError(null) }
 
   async function save() {
-    const message = validateAgents(agents)
+    const message = validateAgents(agents, options)
     if (message !== undefined) { setError(message); return }
     setStatus('saving'); setError(null)
     try {
@@ -88,18 +87,26 @@ export function SettingsOrchestratorSection({ api, t }) {
     {options.length === 0 && <p role="status">{t('noModels')}</p>}
     {agents.length === 0 && <p role="status">{t('empty')}</p>}
     <div style={list}>
-      {agents.map((agent, index) => <div style={card} key={index}>
+      {agents.map((agent, index) => {
+        const selectedModel = options.find(option => option.provider === agent.provider && option.model === agent.model)
+        const reasoning = selectedModel?.reasoning
+        return <div style={card} key={index}>
         <div style={grid}>
           <label style={field}><span>{t('id')}</span><input style={control} value={agent.id} maxLength={48} onChange={event => update(index, { id: event.target.value })} disabled={!writable} /></label>
-          <label style={field}><span>{t('model')}</span><select style={selectControl} value={modelValue(agent)} onChange={event => { const [provider, model] = JSON.parse(event.target.value); update(index, { provider, model }) }} disabled={!writable}>
+          <label style={field}><span>{t('model')}</span><select style={selectControl} value={modelValue(agent)} title={selectedModel === undefined ? t('chooseModel') : selectedModel.modelName + ' (' + selectedModel.model + ')'} onChange={event => { const [provider, model] = JSON.parse(event.target.value); update(index, { provider, model, reasoningEffort: undefined }) }} disabled={!writable}>
             <option style={nativeOption} value={JSON.stringify(['', ''])}>{t('chooseModel')}</option>
             {groups.map(group => <optgroup style={nativeOption} key={group.id} label={group.name}>{group.models.map(model => <option style={nativeOption} key={model.id} value={JSON.stringify([group.id, model.id])}>{model.name} ({model.id})</option>)}</optgroup>)}
           </select></label>
+          {reasoning !== undefined && <label style={field}><span>{t('reasoningEffort')}</span><select style={selectControl} value={agent.reasoningEffort ?? ''} title={agent.reasoningEffort === undefined ? t('modelDefault') : reasoning.efforts.find(effort => effort.id === agent.reasoningEffort)?.name ?? agent.reasoningEffort} onChange={event => update(index, { reasoningEffort: event.target.value === '' ? undefined : event.target.value })} disabled={!writable}>
+            <option style={nativeOption} value="">{t('modelDefault')}{reasoning.defaultEffort === undefined ? '' : ' (' + (reasoning.efforts.find(effort => effort.id === reasoning.defaultEffort)?.name ?? reasoning.defaultEffort) + ')'}</option>
+            {reasoning.efforts.map(effort => <option style={nativeOption} key={effort.id} value={effort.id}>{effort.name}</option>)}
+          </select></label>}
           <label style={{ ...field, gridColumn: '1 / -1' }}><span>{t('description')}</span><textarea style={{ ...control, resize: 'vertical', minHeight: 72 }} value={agent.description} onChange={event => update(index, { description: event.target.value })} disabled={!writable} /></label>
           <label style={field}><span>{t('maxTokens')}</span><input style={control} type="number" min="1" step="1" value={agent.maxTokens ?? ''} onChange={event => update(index, { maxTokens: event.target.value === '' ? undefined : Number(event.target.value) })} disabled={!writable} /></label>
         </div>
         <div style={actions}><button type="button" style={iconButton} onClick={() => remove(index)} disabled={!writable} aria-label={t('remove')} title={t('remove')}>×</button></div>
-      </div>)}
+      </div>
+      })}
     </div>
     {error && <p role="alert" style={{ color: 'var(--danger-color, #c93434)' }}>{error}</p>}
     <div style={{ ...actions, marginTop: 18 }}><button style={primary} onClick={() => void save()} disabled={!writable || !dirty || status === 'saving'}>{status === 'saving' ? t('saving') : t('save')}</button></div>

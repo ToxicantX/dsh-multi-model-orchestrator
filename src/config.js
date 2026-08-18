@@ -1,4 +1,5 @@
 export const AGENT_ID = /^[a-z][a-z0-9_-]{0,47}$/u
+export const DEFAULT_AGENT_DESCRIPTION = 'Implement and adjust the assigned code scope, add or update focused tests, inspect your diff, and run the checks that cover your changes before handoff. Report changed files, commands and results, risks, and blockers to the primary Agent; never claim completion when a required check fails.'
 
 function requiredString(value, label, maxLength = 512) {
   if (typeof value !== 'string' || value.trim() === '') throw new Error('Missing required field: ' + label)
@@ -19,11 +20,22 @@ export function normalizeAgents(value, options = {}) {
     ids.add(id)
     const provider = requiredString(entry.provider, 'agents[' + index + '].provider')
     const model = requiredString(entry.model, 'agents[' + index + '].model')
-    const fallback = 'You are the ' + id + ' specialist. Own the assigned scope, inspect the actual repository, work rigorously, run focused verification, and report concrete results, risks, and unresolved questions to the primary orchestrator.'
-    const description = entry.description === undefined ? fallback : requiredString(entry.description, 'agents[' + index + '].description', 2000)
+    const description = entry.description === undefined
+      ? DEFAULT_AGENT_DESCRIPTION
+      : requiredString(entry.description, 'agents[' + index + '].description', 2000)
+    const reasoningEffort = entry.reasoningEffort === undefined
+      ? undefined
+      : requiredString(entry.reasoningEffort, 'agents[' + index + '].reasoningEffort', 128)
     if (entry.maxTokens !== undefined && (!Number.isSafeInteger(entry.maxTokens) || entry.maxTokens < 1)) {
       throw new Error('agents[' + index + '].maxTokens must be a positive safe integer')
     }
-    return { id, provider, model, description, ...(entry.maxTokens === undefined ? {} : { maxTokens: entry.maxTokens }) }
+    return {
+      id,
+      provider,
+      model,
+      description,
+      ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
+      ...(entry.maxTokens === undefined ? {} : { maxTokens: entry.maxTokens }),
+    }
   })
 }

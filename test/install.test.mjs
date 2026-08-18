@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import test from 'node:test'
 import packageJson from '../package.json' with { type: 'json' }
 import hostPlugin, { Config as HostConfig, ORCHESTRATOR_SETTINGS_ENDPOINT, ORCHESTRATOR_SETTINGS_NAMESPACE, AgentSettingsSchema, SettingsSchema, MultiModelOrchestratorSettings, apply as applyHost, inject as hostInject, settingsRoute } from '../host.js'
-import { normalizeAgents } from '../src/config.js'
+import { DEFAULT_AGENT_DESCRIPTION, normalizeAgents } from '../src/config.js'
 import { install, parseArgs } from '../src/install.mjs'
 
 const agent = (id, overrides = {}) => ({ id, provider: 'provider-' + id, model: 'model-' + id, description: 'Own ' + id + '.', ...overrides })
@@ -39,6 +39,10 @@ test('installer copies exactly the fixed orchestrator preset and no agent data r
     assert.doesNotMatch(output, /^\s+(?:agents|provider|model|apiKey|baseURL):/gim)
     assert.doesNotMatch(output, /(?:API[_ ]?KEY|BASEURL|apiKey|baseURL|provider:|model:)/iu)
     assert.equal((output.match(/dsh-multi-model-orchestrator\/agent/gu) ?? []).length, 1)
+    assert.match(output, /You own requirement analysis, repository inspection, implementation planning, architecture decisions, task decomposition, integration, and final verification/)
+    assert.match(output, /Delegate scoped development and adjustment work/)
+    assert.match(output, /Require each child to inspect its own diff and run the focused tests, type checks, or build checks/)
+    assert.match(output, /independently run the relevant final tests and builds/)
     assert.match(await readFile(join(target, 'preset.yml'), 'utf8'), /multi-model orchestrator/iu)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
@@ -54,7 +58,9 @@ test('parseArgs handles fixed installer flags and rejects invalid values', () =>
 test('normalizeAgents permits empty only with allowEmpty', () => {
   assert.deepEqual(normalizeAgents([], { allowEmpty: true }), [])
   assert.throws(() => normalizeAgents([]), /non-empty array/)
-  assert.deepEqual(normalizeAgents([agent('solo')])[0], { ...agent('solo') })
+  assert.deepEqual(normalizeAgents([agent('solo', { reasoningEffort: 'high' })])[0], { ...agent('solo'), reasoningEffort: 'high' })
+  assert.equal(normalizeAgents([{ id: 'defaulted', provider: 'p', model: 'm' }])[0].description, DEFAULT_AGENT_DESCRIPTION)
+  assert.throws(() => normalizeAgents([agent('solo', { reasoningEffort: 'high\nlow' })]), /Invalid newline.*reasoningEffort/)
 })
 
 test('host exports a unique settings namespace and validates service snapshots', () => {

@@ -12,6 +12,7 @@ export const AgentSettingsSchema = z.object({
   provider: z.string().required(),
   model: z.string().required(),
   description: z.string(),
+  reasoningEffort: z.string(),
   maxTokens: z.number().step(1).min(1).max(Number.MAX_SAFE_INTEGER),
 })
 

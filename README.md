@@ -12,13 +12,16 @@ DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web set
 
 When a session uses the **Multi-model orchestrator** preset, every configured Agent becomes an independent subagent tool that the primary Agent can delegate work to.
 
+The primary Agent owns requirement analysis, repository inspection, implementation planning, architecture decisions, integration, and final verification. Subagents implement and adjust explicitly assigned code scopes, inspect their own diffs, and run the focused tests, type checks, or builds that cover their changes before handoff. The primary Agent then inspects and integrates the actual artifacts and independently runs the final verification.
+
 ### Features
 
 - Create and remove any number of specialist Agents.
 - Select models already available in DSH.
-- Give each Agent a stable ID and role description.
+- Give each Agent a stable ID and development scope.
+- Select an optional reasoning effort from the exact levels advertised by the Agent's model.
 - Set an optional maximum output-token limit per Agent.
-- Delegate independent work to different models in parallel.
+- Delegate independent, non-overlapping implementation tasks to different models in parallel.
 - Keep each running session on the Agent configuration it started with.
 
 ### Requirements
@@ -50,9 +53,9 @@ When running DSH from a source checkout, use `pnpm dsh` instead of `dsh` in both
 1. Open DSH Web.
 2. Go to **Settings > Agent orchestration**.
 3. Select **Add Agent**.
-4. Enter an Agent ID and role description.
+4. Enter an Agent ID and development scope.
 5. Select one of the models available in DSH.
-6. Optionally set the maximum output-token limit.
+6. Optionally select a reasoning effort supported by that model and set the maximum output-token limit.
 7. Save the configuration.
 8. Create a session with the **Multi-model orchestrator** preset.
 
@@ -62,9 +65,10 @@ Create a new session after changing the Agent roster or model assignments. Sessi
 
 | Field | Required | Description |
 | --- | --- | --- |
-| Agent ID | Yes | Unique lowercase identifier used in the subagent tool name, such as `architect` or `reviewer`. |
+| Agent ID | Yes | Stable identity used for the subagent tool name and per-Agent runtime settings, such as `architect` or `reviewer`. |
 | Model | Yes | Provider and model selected from the DSH model catalog. |
-| Role description | No | The Agent's responsibility and working focus. |
+| Development scope | No | Implementation and adjustment instructions for the Agent. New Agents start with a default responsibility that requires focused tests and diff inspection before handoff; customize it to narrow the implementation scope. It does not determine Agent identity or transfer primary analysis and final verification. |
+| Reasoning effort | No | One of the exact effort levels advertised by the selected model; omission uses the model default. |
 | Maximum output tokens | No | Positive integer limiting the Agent's generated output. |
 
 ### Local development
@@ -92,11 +96,14 @@ DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent �
 
 Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent 都会成为独立的子 Agent 工具，供主 Agent 按任务需要进行委派。
 
+主 Agent 负责需求分析、代码库检查、实现规划、架构决策、改动集成和最终验证。子 Agent 只实现和调整明确分配的代码范围，交付前检查自己的 diff，并运行覆盖其改动的局部测试、类型检查或构建。主 Agent 随后检查并集成实际产物，再独立执行最终验证。
+
 ### 功能特性
 
 - 创建和删除任意数量的专业 Agent。
 - 直接选择 DSH 中已有的模型。
-- 为每个 Agent 设置固定 ID 和职责描述。
+- 为每个 Agent 设置固定 ID 和开发职责。
+- 从对应模型实际提供的等级中选择可选推理等级。
 - 为每个 Agent 设置可选的最大输出 Token。
 - 将独立任务并行委派给不同模型。
 - 运行中的 Session 保持启动时的 Agent 配置。
@@ -130,9 +137,9 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 1. 打开 DSH Web。
 2. 进入 **设置 > Agent 编排**。
 3. 点击 **添加 Agent**。
-4. 填写 Agent ID 和职责描述。
+4. 填写 Agent ID 和开发职责。
 5. 从 DSH 可用模型中选择一个模型。
-6. 根据需要设置最大输出 Token。
+6. 根据需要选择该模型支持的推理等级并设置最大输出 Token。
 7. 保存配置。
 8. 使用 **Multi-model orchestrator** 预设创建 Session。
 
@@ -142,9 +149,10 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 
 | 配置项 | 必填 | 说明 |
 | --- | --- | --- |
-| Agent ID | 是 | 用于子 Agent 工具名称的唯一小写标识，例如 `architect` 或 `reviewer`。 |
+| Agent ID | 是 | 用于子 Agent 工具名称和逐 Agent 运行配置的稳定身份，例如 `architect` 或 `reviewer`。 |
 | 模型 | 是 | 从 DSH 模型目录中选择的 Provider 和 Model。 |
-| 职责描述 | 否 | Agent 负责的任务范围和工作重点。 |
+| 开发职责 | 否 | Agent 的实现和调整范围。新建 Agent 会自动填写默认职责，要求交付前检查 diff 并运行局部验证；可继续修改以缩小实现范围。该字段不用于确定身份，也不转移主 Agent 的分析和最终验证责任。 |
+| 推理等级 | 否 | 所选模型实际提供的推理等级之一；省略时使用模型默认值。 |
 | 最大输出 Token | 否 | 限制 Agent 输出长度的正整数。 |
 
 ### 本地开发
