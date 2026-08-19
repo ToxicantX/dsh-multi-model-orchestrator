@@ -2,10 +2,11 @@ import assert from 'node:assert/strict'
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { Readable } from 'node:stream'
 import test from 'node:test'
 import packageJson from '../package.json' with { type: 'json' }
 import hostPlugin, { Config as HostConfig, ORCHESTRATOR_SETTINGS_ENDPOINT, ORCHESTRATOR_SETTINGS_NAMESPACE, AgentSettingsSchema, SettingsSchema, MultiModelOrchestratorSettings, apply as applyHost, inject as hostInject, settingsRoute } from '../host.js'
-import { DEFAULT_AGENT_DESCRIPTION, normalizeAgents } from '../src/config.js'
+import { AGENT_WARNING_THRESHOLD, DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT, normalizeAgents } from '../src/config.js'
 import { install, parseArgs } from '../src/install.mjs'
 
 const agent = (id, overrides = {}) => ({ id, provider: 'provider-' + id, model: 'model-' + id, description: 'Own ' + id + '.', ...overrides })
@@ -25,6 +26,25 @@ function settingsContext(initial = { agents: [] }) {
     effect(callback) { return callback() },
   }
   return { ctx, registrations, set(next) { const previous = current; current = structuredClone(next); watched?.(current, previous) } }
+}
+
+async function invokeSettingsRoute(service, { method = 'GET', origin, contentType, body } = {}) {
+  const req = Readable.from(body === undefined ? [] : [body])
+  req.method = method
+  req.headers = {
+    host: '127.0.0.1:60316',
+    ...(origin === undefined ? {} : { origin }),
+    ...(contentType === undefined ? {} : { 'content-type': contentType }),
+  }
+  let status
+  let headers
+  let output = ''
+  const res = {
+    writeHead(nextStatus, nextHeaders) { status = nextStatus; headers = nextHeaders },
+    end(value = '') { output += value },
+  }
+  await settingsRoute(service).handler(req, res)
+  return { status, headers, value: JSON.parse(output) }
 }
 
 test('installer copies exactly the fixed orchestrator preset and no agent data rows', async () => {
@@ -61,6 +81,10 @@ test('normalizeAgents permits empty only with allowEmpty', () => {
   assert.deepEqual(normalizeAgents([agent('solo', { reasoningEffort: 'high' })])[0], { ...agent('solo'), reasoningEffort: 'high' })
   assert.equal(normalizeAgents([{ id: 'defaulted', provider: 'p', model: 'm' }])[0].description, DEFAULT_AGENT_DESCRIPTION)
   assert.throws(() => normalizeAgents([agent('solo', { reasoningEffort: 'high\nlow' })]), /Invalid newline.*reasoningEffort/)
+  assert.equal(AGENT_WARNING_THRESHOLD, 8)
+  assert.equal(MAX_AGENT_COUNT, 32)
+  const tooMany = Array.from({ length: MAX_AGENT_COUNT + 1 }, (_, index) => agent('agent-' + index))
+  assert.throws(() => normalizeAgents(tooMany, { allowEmpty: true }), /must not contain more than 32 entries/)
 })
 
 test('host exports a unique settings namespace and validates service snapshots', () => {
@@ -86,6 +110,33 @@ test('host endpoint replaces only validated Agent settings', async () => {
   assert.deepEqual(await service.replaceAgents([agent('after')]), [agent('after')])
   assert.equal(settingsRoute(service).path, ORCHESTRATOR_SETTINGS_ENDPOINT)
   await assert.rejects(() => service.replaceAgents([{ id: 'bad id', provider: 'p', model: 'm' }]), /Invalid agent id/)
+})
+
+test('host settings route enforces origin, method, media type, shape, size, and normalization', async () => {
+  const fake = settingsContext({ agents: [agent('before')] })
+  const service = new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath: undefined })
+
+  const get = await invokeSettingsRoute(service)
+  assert.equal(get.status, 200)
+  assert.deepEqual(get.value, { agents: [agent('before')] })
+  assert.match(get.headers['content-type'], /^application\/json/u)
+  assert.deepEqual((await invokeSettingsRoute(service, { method: 'HEAD' })).value, {})
+  assert.equal((await invokeSettingsRoute(service, { origin: 'https://example.test' })).status, 403)
+  assert.equal((await invokeSettingsRoute(service, { method: 'POST' })).status, 405)
+  assert.equal((await invokeSettingsRoute(service, { method: 'PUT', contentType: 'text/plain', body: '{}' })).status, 415)
+  assert.equal((await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json', body: '{' })).status, 400)
+  assert.equal((await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json', body: JSON.stringify({ agents: [], extra: true }) })).status, 400)
+  assert.match((await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json', body: JSON.stringify({ agents: [], padding: 'x'.repeat(64 * 1024) }) })).value.error, /exceeds 64 KiB/)
+
+  const tooMany = Array.from({ length: MAX_AGENT_COUNT + 1 }, (_, index) => agent('agent-' + index))
+  const limited = await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json; charset=utf-8', body: JSON.stringify({ agents: tooMany }) })
+  assert.equal(limited.status, 400)
+  assert.match(limited.value.error, /must not contain more than 32 entries/)
+
+  const replacement = agent('after', { id: ' after ' })
+  const put = await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json', body: JSON.stringify({ agents: [replacement] }) })
+  assert.equal(put.status, 200)
+  assert.equal(put.value.agents[0].id, 'after')
 })
 
 test('host onChange touches an existing preset path', async () => {

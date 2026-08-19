@@ -18,6 +18,7 @@ jobs:
       - run: corepack enable
       - run: corepack prepare pnpm@9.15.9 --activate
       - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
       - run: pnpm bundle
       - run: git diff --exit-code -- lib/client.js
       - run: pnpm test

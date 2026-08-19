@@ -8,7 +8,7 @@ Configure and run a team of model-backed specialist Agents in [DeepSeek Harness]
 
 ### Overview
 
-DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can create any number of specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility.
+DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can create up to 32 specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility.
 
 When a session uses the **Multi-model orchestrator** preset, every configured Agent becomes an independent subagent tool that the primary Agent can delegate work to.
 
@@ -16,7 +16,7 @@ The primary Agent owns requirement analysis, repository inspection, implementati
 
 ### Features
 
-- Create and remove any number of specialist Agents.
+- Create and remove up to 32 specialist Agents.
 - Select models already available in DSH.
 - Give each Agent a stable ID and development scope.
 - Select an optional reasoning effort from the exact levels advertised by the Agent's model.
@@ -26,7 +26,7 @@ The primary Agent owns requirement analysis, repository inspection, implementati
 
 ### Requirements
 
-- DeepSeek Harness 0.1.0-rc.5 or a compatible newer release
+- DeepSeek Harness 0.1.0-rc.7 or a compatible newer release
 - Node.js 22.19 or newer
 - At least one model available in DSH **Settings > Models**
 
@@ -78,8 +78,17 @@ git clone https://github.com/ToxicantX/dsh-multi-model-orchestrator.git
 cd dsh-multi-model-orchestrator
 pnpm install
 pnpm bundle
+pnpm typecheck
 pnpm test
 ~~~
+
+Release management follows [Semantic Versioning](https://semver.org/) (SemVer). Record user-facing changes in [CHANGELOG.md](CHANGELOG.md), create tags as `vX.Y.Z`, and run the local preflight:
+
+~~~powershell
+pnpm release:check v0.5.0
+~~~
+
+Pushing a matching `vX.Y.Z` tag triggers verification and a GitHub Release with generated notes. npm publishing is not automatic.
 
 Install a local checkout into a DSH source profile:
 
@@ -92,7 +101,7 @@ pnpm dsh plugin --profile web exec dsh-orchestrator-install --force
 
 ### 项目介绍
 
-DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent 编排功能。你可以创建任意数量的专业 Agent，为每个 Agent 选择 DSH 中已有的模型，并设置清晰的职责。
+DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent 编排功能。你可以创建最多 32 个专业 Agent，为每个 Agent 选择 DSH 中已有的模型，并设置清晰的职责。
 
 Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent 都会成为独立的子 Agent 工具，供主 Agent 按任务需要进行委派。
 
@@ -100,7 +109,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 
 ### 功能特性
 
-- 创建和删除任意数量的专业 Agent。
+- 创建和删除最多 32 个专业 Agent。
 - 直接选择 DSH 中已有的模型。
 - 为每个 Agent 设置固定 ID 和开发职责。
 - 从对应模型实际提供的等级中选择可选推理等级。
@@ -110,7 +119,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 
 ### 环境要求
 
-- DeepSeek Harness 0.1.0-rc.5 或兼容的新版本
+- DeepSeek Harness 0.1.0-rc.7 或兼容的新版本
 - Node.js 22.19 或更高版本
 - DSH **设置 > 模型** 中至少有一个可用模型
 
@@ -162,8 +171,17 @@ git clone https://github.com/ToxicantX/dsh-multi-model-orchestrator.git
 cd dsh-multi-model-orchestrator
 pnpm install
 pnpm bundle
+pnpm typecheck
 pnpm test
 ~~~
+
+发布管理遵循[语义化版本](https://semver.org/)（SemVer）。请在 [CHANGELOG.md](CHANGELOG.md) 记录面向用户的变更，使用 `vX.Y.Z` 格式创建 tag，并运行本地预检：
+
+~~~powershell
+pnpm release:check v0.5.0
+~~~
+
+推送匹配的 `vX.Y.Z` tag 会触发验证并创建带自动生成说明的 GitHub Release。npm 发布不会自动执行。
 
 将本地仓库安装到 DSH 源码 profile：
 

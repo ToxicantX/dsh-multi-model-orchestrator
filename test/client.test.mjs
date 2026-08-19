@@ -1,18 +1,26 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import { catalogOptions, cleanAgents, createAgentDraft, validateAgents } from '../client/state.ts'
-import { DEFAULT_AGENT_DESCRIPTION } from '../src/config.js'
+import { agentCountWarning, catalogOptions, cleanAgents, createAgentDraft, validateAgents, withRenderKey } from '../client/state.ts'
+import { AGENT_WARNING_THRESHOLD, DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT } from '../src/config.js'
 
-test('creates an Agent draft with the shared default development responsibility', () => {
-  assert.deepEqual(createAgentDraft(), {
+const input = (id, overrides = {}) => ({ id, provider: 'p', model: 'm', description: '', ...overrides })
+
+test('creates stable Agent draft keys with the shared default responsibility', () => {
+  const first = createAgentDraft()
+  const second = createAgentDraft()
+  assert.deepEqual({ ...first, renderKey: undefined }, {
     id: '',
     provider: '',
     model: '',
     description: DEFAULT_AGENT_DESCRIPTION,
     reasoningEffort: undefined,
     maxTokens: undefined,
+    renderKey: undefined,
   })
+  assert.match(first.renderKey, /^agent-\d+$/u)
+  assert.notEqual(first.renderKey, second.renderKey)
+  assert.notEqual(withRenderKey(input('loaded')).renderKey, first.renderKey)
   assert.match(DEFAULT_AGENT_DESCRIPTION, /inspect your diff/)
   assert.match(DEFAULT_AGENT_DESCRIPTION, /never claim completion when a required check fails/)
 })
@@ -35,22 +43,42 @@ test('flattens model identifiers and detached reasoning metadata', () => {
   assert.equal(options[0].reasoning.efforts[0].name, 'High')
 })
 
-test('validates IDs, uniqueness, model selection, and max tokens', () => {
-  assert.equal(validateAgents([{ id: 'reviewer', provider: 'grok', model: 'grok-4.6', description: '' }]), undefined)
-  assert.match(validateAgents([{ id: 'Bad ID', provider: 'grok', model: 'm', description: '' }]), /invalid ID/)
-  assert.match(validateAgents([{ id: 'a', provider: 'p', model: 'm', description: '' }, { id: 'a', provider: 'p', model: 'm', description: '' }]), /unique/)
-  assert.match(validateAgents([{ id: 'a', provider: '', model: '', description: '' }]), /select a model/)
-  assert.match(validateAgents([{ id: 'a', provider: 'p', model: 'm', description: '', maxTokens: 0 }]), /positive integer/)
+test('validates normalized IDs, models, reasoning, and token limits', () => {
+  assert.equal(validateAgents([input(' reviewer ')]), undefined)
+  assert.match(validateAgents([input('Bad ID')]), /invalid ID/)
+  assert.match(validateAgents([input(' a '), input('a')]), /unique/)
+  assert.match(validateAgents([input('a', { provider: '', model: '' })]), /select a model/)
+  assert.match(validateAgents([input('a', { maxTokens: 0 })]), /positive integer/)
+
   const options = catalogOptions([{ id: 'p', name: 'P', models: [{ id: 'm', name: 'M', reasoning: { efforts: [{ id: 'high', name: 'High' }] } }] }])
-  assert.equal(validateAgents([{ id: 'a', provider: 'p', model: 'm', description: '', reasoningEffort: 'high' }], options), undefined)
-  assert.match(validateAgents([{ id: 'a', provider: 'p', model: 'm', description: '', reasoningEffort: 'low' }], options), /unsupported reasoning effort/)
+  assert.equal(validateAgents([input('a', { reasoningEffort: 'high' })], options), undefined)
+  assert.match(validateAgents([input('a', { reasoningEffort: 'low' })], options), /unsupported reasoning effort/)
+  assert.match(validateAgents([input('a', { model: 'removed' })], options), /no longer available/)
+  assert.match(validateAgents([input('a')], []), /no longer available/)
 })
 
-test('settings payload contains no credential or endpoint fields', async () => {
-  const agents = cleanAgents([{ id: 'a', provider: 'route', model: 'model', description: ' Role ', reasoningEffort: 'high', maxTokens: 4096 }])
+test('enforces the Agent cap and exposes the soft warning threshold', () => {
+  const maximum = Array.from({ length: MAX_AGENT_COUNT }, (_, index) => input('agent-' + index))
+  assert.equal(validateAgents(maximum), undefined)
+  assert.match(validateAgents([...maximum, input('overflow')]), /must not exceed 32/)
+  assert.equal(agentCountWarning(AGENT_WARNING_THRESHOLD), false)
+  assert.equal(agentCountWarning(AGENT_WARNING_THRESHOLD + 1), true)
+  assert.equal(agentCountWarning(MAX_AGENT_COUNT + 1), false)
+})
+
+test('settings payload strips render keys and credential-like fields', async () => {
+  const agents = cleanAgents([{
+    id: ' a ',
+    provider: 'route',
+    model: 'model',
+    description: ' Role ',
+    reasoningEffort: 'high',
+    maxTokens: 4096,
+    renderKey: 'internal-only',
+  }])
   assert.deepEqual(agents, [{ id: 'a', provider: 'route', model: 'model', description: 'Role', reasoningEffort: 'high', maxTokens: 4096 }])
   const serialized = JSON.stringify({ agents })
-  assert.doesNotMatch(serialized, /apiKey|baseURL|credential/i)
+  assert.doesNotMatch(serialized, /renderKey|apiKey|baseURL|credential/i)
   const bundle = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
   assert.doesNotMatch(bundle, /discoverModels|credentials[.]|apiKeyEnv|baseURL/)
   assert.match(bundle, /\/plugins\/dsh-multi-model-orchestrator\/settings/)

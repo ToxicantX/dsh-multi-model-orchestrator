@@ -1,0 +1,75 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PNPM_VERSION: 9.15.9
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare "pnpm@${PNPM_VERSION}" --activate
+      - name: Install dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        shell: bash
+        run: pnpm typecheck
+      - name: Bundle
+        shell: bash
+        run: pnpm bundle
+      - name: Check generated bundle drift
+        shell: bash
+        run: git diff --exit-code -- lib/client.js
+      - name: Run tests
+        shell: bash
+        run: pnpm test
+      - name: Check installer help
+        shell: bash
+        run: node src/install.mjs --help
+      - name: Check release metadata
+        shell: bash
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: pnpm release:check "$GITHUB_REF_NAME"
+      - name: Pack release artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-artifacts
+          pnpm pack --pack-destination release-artifacts
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tgz=(release-artifacts/*.tgz)
+          test "${#tgz[@]}" -eq 1
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${tgz[0]}" --clobber
+          else
+            release_args=(--generate-notes --title "$GITHUB_REF_NAME")
+            if [[ "$GITHUB_REF_NAME" == *-* ]]; then release_args+=(--prerelease); fi
+            gh release create "$GITHUB_REF_NAME" "${tgz[0]}" "${release_args[@]}"
+          fi
