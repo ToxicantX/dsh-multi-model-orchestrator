@@ -1,11 +1,6 @@
 #!/usr/bin/env node
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
-import { basename, dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const DEFAULT_PRESET_ID = 'multi-model-orchestrator'
-const root = dirname(dirname(fileURLToPath(import.meta.url)))
+import { basename } from 'node:path'
+import { provisionPreset, defaultPresetTarget, DEFAULT_PRESET_ID } from './preset.js'
 
 function usage() {
   return [
@@ -36,25 +31,19 @@ export function parseArgs(argv) {
   return options
 }
 
-export async function install(options = {}) {
+export function install(options = {}) {
   const presetId = options.presetId ?? DEFAULT_PRESET_ID
-  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(presetId)) throw new Error('Invalid preset id: ' + presetId)
-  const target = options.target ?? join(process.env.DSH_HOME || join(homedir(), '.dsh'), '.agent-presets', presetId)
-  await mkdir(target, { recursive: true })
-  const agentPreset = await readFile(join(root, 'preset', 'agent.cordis.yml'), 'utf8')
-  await writeFile(join(target, 'agent.cordis.yml'), agentPreset, { encoding: 'utf8', flag: options.force ? 'w' : 'wx' })
-  await cp(join(root, 'preset', 'preset.yml'), join(target, 'preset.yml'), { force: options.force, errorOnExist: !options.force })
-  return { target }
+  const target = options.target ?? defaultPresetTarget(presetId)
+  return provisionPreset({ target, presetId, force: options.force })
 }
 
-// Package-manager bin shims can reach this file through a symlinked path.
 const isMain = basename(process.argv[1] ?? '') === 'install.mjs'
 if (isMain) {
   try {
     const options = parseArgs(process.argv.slice(2))
     if (options.help) { console.log(usage()); process.exit(0) }
-    const result = await install(options)
-    console.log('Installed the fixed multi-model orchestrator preset at ' + result.target)
+    const result = install(options)
+    console.log((result.changed.length === 0 ? 'Preset is already current at ' : 'Provisioned the multi-model orchestrator preset at ') + result.target)
     console.log('Open DSH Settings > Orchestrator to configure agents from existing models.')
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))

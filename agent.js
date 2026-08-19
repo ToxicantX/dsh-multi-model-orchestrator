@@ -11,12 +11,12 @@ export function specialistPersona(agent) {
   return [
     'Your orchestrator Agent ID is "' + agent.id + '".',
     agent.description,
-    'You are an implementation specialist. Treat the development scope above only as a specialization within this fixed responsibility: develop and adjust the scope assigned by the primary Agent. Before reporting completion, inspect your diff and run the focused tests, type checks, or build checks that cover your changes; if any required check fails, report the failure instead of claiming completion. Return changed files, commands and results, risks, and blockers. Leave overall analysis, architecture decisions, cross-task integration, and final independent verification to the primary Agent.',
+    'Work on the assigned task. Inspect the relevant code, make focused changes, run checks appropriate to the change, and report changed files, results, risks, and blockers.',
   ].join('\n\n')
 }
 
-function currentSpecialistId(ctx) {
-  const session = ctx.agent?.session
+function currentSpecialistId(agent) {
+  const session = agent?.session
   if (session === undefined) return undefined
   const events = session.events.slice(session.header.seedLength ?? 0)
   const descriptor = events.find(event => event.type === 'subagent/descriptor')?.data
@@ -25,26 +25,25 @@ function currentSpecialistId(ctx) {
 }
 
 function installReasoningEffort(ctx, agents) {
-  const specialistId = currentSpecialistId(ctx)
-  if (specialistId === undefined) return
-  const reasoningEffort = agents.find(agent => agent.id === specialistId)?.reasoningEffort
-  if (reasoningEffort === undefined) return
-  ctx.on('agent/request', async (_payload, next) => ({
-    ...await next(),
-    reasoningEffort,
-  }))
+  const efforts = new Map(agents.flatMap(agent => agent.reasoningEffort === undefined ? [] : [[agent.id, agent.reasoningEffort]]))
+  if (efforts.size === 0) return
+  ctx.on('agent/request', async ({ agent }, next) => {
+    const resolved = await next()
+    const reasoningEffort = efforts.get(currentSpecialistId(agent))
+    return reasoningEffort === undefined ? resolved : { ...resolved, reasoningEffort }
+  })
 }
 
 export function roleGuidance(agents) {
   if (agents.length === 0) return 'No orchestrator specialists are configured. Add agents in Settings > Orchestrator, then create a new session.'
   return [
-    'Configured implementation specialists:',
+    'Available specialists:',
     ...agents.map(agent => '- subagent_' + agent.id + ': ' + agent.description),
     '',
-    'Own the primary analysis: inspect the repository, determine the implementation approach, define file ownership, and set acceptance checks before delegating.',
-    'Delegate scoped development and adjustment work concurrently when file ownership does not overlap. Give every specialist a standalone implementation prompt with explicit files, constraints, acceptance checks, and the focused verification it must complete before handoff.',
-    'At each step boundary, process specialist completion notices before continuing any work that depends on them. Require each specialist to report its diff and executed checks, then inspect the actual artifacts, reconcile conflicts, integrate the changes, and independently run the final verification yourself.',
-    'Do not delegate overall architecture decisions or final acceptance. Do not finalize while required specialist runs are outstanding; explicitly cancel or mark as non-blocking any run you intentionally choose not to await.',
+    'Delegate when a specialist can move the work forward; handle small local tasks directly when delegation would add overhead.',
+    'Start independent tasks together, and wait for prerequisites before starting dependent work.',
+    'Give each child a clear objective and enough context. For follow-up work on the same task, continue the existing child instead of starting a duplicate.',
+    'Review returned work, integrate it, and run final checks appropriate to the risk.',
   ].join('\n')
 }
 

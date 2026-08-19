@@ -4,6 +4,24 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-19
+
+### Added
+
+- Reduced normal installation to one `dsh plugin --profile web add` command; the Host provisions the Agent preset automatically on startup.
+- Added a managed preset marker with SHA-256 hashes for safe, idempotent adoption and upgrades.
+
+### Changed
+
+- Preserved manually edited preset files by refusing automatic overwrite when their content differs from the managed hashes.
+- Kept `dsh-orchestrator-install --force` as an explicit repair path for users who choose to discard conflicting local edits.
+- Simplified delegation guidance around useful delegation, dependency-aware parallel work, continuable child reuse, and risk-proportionate verification.
+
+### Fixed
+
+- Applied each specialist's configured reasoning effort from the actual child request context, after the continuable child identity is available.
+- Recognized the unmodified pre-marker `v0.5.0` preset so its prompt can migrate automatically without overwriting user edits.
+
 ## [0.5.0] - 2026-08-19
 
 ### Added
@@ -26,5 +44,6 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/releases/tag/v0.5.0

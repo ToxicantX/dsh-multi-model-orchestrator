@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
@@ -8,6 +9,7 @@ import packageJson from '../package.json' with { type: 'json' }
 import hostPlugin, { Config as HostConfig, ORCHESTRATOR_SETTINGS_ENDPOINT, ORCHESTRATOR_SETTINGS_NAMESPACE, AgentSettingsSchema, SettingsSchema, MultiModelOrchestratorSettings, apply as applyHost, inject as hostInject, settingsRoute } from '../host.js'
 import { AGENT_WARNING_THRESHOLD, DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT, normalizeAgents } from '../src/config.js'
 import { install, parseArgs } from '../src/install.mjs'
+import { PRESET_MARKER, provisionPreset } from '../src/preset.js'
 
 const agent = (id, overrides = {}) => ({ id, provider: 'provider-' + id, model: 'model-' + id, description: 'Own ' + id + '.', ...overrides })
 
@@ -15,9 +17,13 @@ function settingsContext(initial = { agents: [] }) {
   let current = structuredClone(initial)
   let watched
   const registrations = []
+  const provided = new Map()
+  const routes = []
   const ctx = {
     fiber: { state: 0 },
     reflect: { provide() {} },
+    provide(name, value) { provided.set(name, value) },
+    webServer: { register(route) { routes.push(route); return () => {} } },
     settings: { register(ns, schema, options) {
       registrations.push({ ns, schema, options })
       return { get: () => current, watch: callback => { watched = callback; return () => {} }, replace: async next => { const previous = current; current = structuredClone(next); await watched?.(current, previous) } }
@@ -25,7 +31,7 @@ function settingsContext(initial = { agents: [] }) {
     inject(_names, callback) { callback(ctx) },
     effect(callback) { return callback() },
   }
-  return { ctx, registrations, set(next) { const previous = current; current = structuredClone(next); watched?.(current, previous) } }
+  return { ctx, registrations, provided, routes, set(next) { const previous = current; current = structuredClone(next); watched?.(current, previous) } }
 }
 
 async function invokeSettingsRoute(service, { method = 'GET', origin, contentType, body } = {}) {
@@ -59,11 +65,136 @@ test('installer copies exactly the fixed orchestrator preset and no agent data r
     assert.doesNotMatch(output, /^\s+(?:agents|provider|model|apiKey|baseURL):/gim)
     assert.doesNotMatch(output, /(?:API[_ ]?KEY|BASEURL|apiKey|baseURL|provider:|model:)/iu)
     assert.equal((output.match(/dsh-multi-model-orchestrator\/agent/gu) ?? []).length, 1)
-    assert.match(output, /You own requirement analysis, repository inspection, implementation planning, architecture decisions, task decomposition, integration, and final verification/)
-    assert.match(output, /Delegate scoped development and adjustment work/)
-    assert.match(output, /Require each child to inspect its own diff and run the focused tests, type checks, or build checks/)
-    assert.match(output, /independently run the relevant final tests and builds/)
+    assert.match(output, /Use the configured specialists when delegation is useful/)
+    assert.match(output, /Start independent delegated tasks together/)
+    assert.match(output, /wait for prerequisites before starting dependent work/)
+    assert.match(output, /continue the existing child instead of starting a duplicate/)
+    assert.match(output, /final checks appropriate to the risk/)
+    assert.doesNotMatch(output, /file ownership|acceptance checks|Do not delegate these responsibilities/u)
     assert.match(await readFile(join(target, 'preset.yml'), 'utf8'), /multi-model orchestrator/iu)
+    assert.deepEqual((await readdir(target)).sort(), [PRESET_MARKER, 'agent.cordis.yml', 'preset.yml'].sort())
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('provisioner is idempotent, adopts legacy content, and preserves unrelated files', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-provision-'))
+  try {
+    const target = join(root, 'preset')
+    const first = provisionPreset({ target })
+    assert.deepEqual(first.changed, ['agent.cordis.yml', 'preset.yml', PRESET_MARKER])
+    await writeFile(join(target, 'unrelated.txt'), 'keep')
+    const second = provisionPreset({ target })
+    assert.deepEqual(second.changed, [])
+    assert.equal(await readFile(join(target, 'unrelated.txt'), 'utf8'), 'keep')
+    const legacy = join(root, 'legacy')
+    await (await import('node:fs/promises')).mkdir(legacy, { recursive: true })
+    await writeFile(join(legacy, 'agent.cordis.yml'), await readFile(join(target, 'agent.cordis.yml')))
+    await writeFile(join(legacy, 'preset.yml'), await readFile(join(target, 'preset.yml')))
+    const adopted = provisionPreset({ target: legacy })
+    assert.equal(adopted.adopted, true)
+    assert.ok((await stat(join(legacy, PRESET_MARKER))).isFile())
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('provisioner migrates a known unmarked bundle without accepting edited content', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-legacy-'))
+  try {
+    const sourceDir = join(root, 'source')
+    const target = join(root, 'legacy')
+    await mkdir(sourceDir, { recursive: true })
+    await mkdir(target, { recursive: true })
+    const legacy = {
+      'agent.cordis.yml': 'legacy agent preset\n',
+      'preset.yml': 'legacy metadata\n',
+    }
+    for (const [name, content] of Object.entries(legacy)) {
+      await writeFile(join(sourceDir, name), 'current ' + content)
+      await writeFile(join(target, name), content)
+    }
+    await writeFile(join(target, 'unrelated.txt'), 'keep')
+    const legacyBundles = [Object.fromEntries(Object.entries(legacy).map(([name, content]) => [name, createHash('sha256').update(content).digest('hex')]))]
+    const result = provisionPreset({ target, sourceDir, legacyBundles })
+    assert.equal(result.adopted, true)
+    assert.equal(result.migrated, true)
+    assert.deepEqual(result.changed, ['agent.cordis.yml', 'preset.yml', PRESET_MARKER])
+    assert.equal(await readFile(join(target, 'agent.cordis.yml'), 'utf8'), 'current legacy agent preset\n')
+    assert.equal(await readFile(join(target, 'preset.yml'), 'utf8'), 'current legacy metadata\n')
+    assert.equal(await readFile(join(target, 'unrelated.txt'), 'utf8'), 'keep')
+
+    const edited = join(root, 'edited')
+    await mkdir(edited, { recursive: true })
+    await writeFile(join(edited, 'agent.cordis.yml'), legacy['agent.cordis.yml'])
+    await writeFile(join(edited, 'preset.yml'), 'user edit\n')
+    assert.throws(() => provisionPreset({ target: edited, sourceDir, legacyBundles }), /does not match.*--force/u)
+    assert.equal(await readFile(join(edited, 'agent.cordis.yml'), 'utf8'), legacy['agent.cordis.yml'])
+    await assert.rejects(readFile(join(edited, PRESET_MARKER)), { code: 'ENOENT' })
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('provisioner safely completes partial targets and refuses edited content', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-partial-'))
+  try {
+    const target = join(root, 'partial')
+    await (await import('node:fs/promises')).mkdir(target, { recursive: true })
+    const sourceTarget = join(root, 'source')
+    provisionPreset({ target: sourceTarget })
+    await writeFile(join(target, 'agent.cordis.yml'), await readFile(join(sourceTarget, 'agent.cordis.yml')))
+    const partial = provisionPreset({ target })
+    assert.deepEqual(partial.changed, ['preset.yml', PRESET_MARKER])
+    const edited = join(root, 'edited')
+    provisionPreset({ target: edited })
+    const before = await readFile(join(edited, 'preset.yml'))
+    await writeFile(join(edited, 'preset.yml'), 'edited')
+    assert.throws(() => provisionPreset({ target: edited }), /preset.yml.*packaged|--force/u)
+    assert.equal(await readFile(join(edited, 'agent.cordis.yml'), 'utf8'), await readFile(join(sourceTarget, 'agent.cordis.yml'), 'utf8'))
+    assert.notEqual(await readFile(join(edited, 'preset.yml'), 'utf8'), before.toString())
+
+    const conflicting = join(root, 'conflicting-unmanaged')
+    await mkdir(conflicting, { recursive: true })
+    await writeFile(join(conflicting, 'agent.cordis.yml'), 'custom content')
+    assert.throws(() => provisionPreset({ target: conflicting }), /does not match.*--force/u)
+    await assert.rejects(readFile(join(conflicting, 'preset.yml')), { code: 'ENOENT' })
+    await assert.rejects(readFile(join(conflicting, PRESET_MARKER)), { code: 'ENOENT' })
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('provisioner safely upgrades content while managed files still match their marker', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-upgrade-'))
+  try {
+    const packaged = join(root, 'packaged')
+    provisionPreset({ target: packaged })
+    const sourceDir = join(root, 'source')
+    await mkdir(sourceDir, { recursive: true })
+    await writeFile(join(sourceDir, 'agent.cordis.yml'), await readFile(join(packaged, 'agent.cordis.yml')))
+    await writeFile(join(sourceDir, 'preset.yml'), await readFile(join(packaged, 'preset.yml')))
+    const target = join(root, 'target')
+    provisionPreset({ target, sourceDir })
+    await writeFile(join(sourceDir, 'preset.yml'), 'name: Updated preset\n')
+    const upgraded = provisionPreset({ target, sourceDir })
+    assert.deepEqual(upgraded.changed, ['preset.yml'])
+    assert.equal(await readFile(join(target, 'preset.yml'), 'utf8'), 'name: Updated preset\n')
+    assert.deepEqual(provisionPreset({ target, sourceDir }).changed, [])
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('provisioner repairs missing files, rejects invalid markers, and force repairs', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-repair-'))
+  try {
+    const target = join(root, 'target')
+    provisionPreset({ target })
+    await rm(join(target, 'preset.yml'))
+    const restored = provisionPreset({ target })
+    assert.deepEqual(restored.changed, ['preset.yml'])
+    await writeFile(join(target, PRESET_MARKER), '{}')
+    assert.throws(() => provisionPreset({ target }), /marker.*invalid|foreign|--force/u)
+    const forced = provisionPreset({ target, force: true })
+    assert.deepEqual(forced.changed, ['agent.cordis.yml', 'preset.yml', PRESET_MARKER])
+    const marker = JSON.parse(await readFile(join(target, PRESET_MARKER), 'utf8'))
+    marker.managedBy = 'another-package'
+    await writeFile(join(target, PRESET_MARKER), JSON.stringify(marker))
+    assert.throws(() => provisionPreset({ target }), /foreign or invalid.*--force/u)
+    await writeFile(join(target, PRESET_MARKER), 'null')
+    assert.throws(() => provisionPreset({ target }), /foreign or invalid.*--force/u)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
@@ -139,6 +270,21 @@ test('host settings route enforces origin, method, media type, shape, size, and 
   assert.equal(put.value.agents[0].id, 'after')
 })
 
+test('host activation provisions the preset before registering its service and route', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-host-provision-'))
+  try {
+    const target = join(root, 'multi-model-orchestrator')
+    const presetPath = join(target, 'agent.cordis.yml')
+    const fake = settingsContext({ agents: [] })
+    applyHost(fake.ctx, { agents: [], presetPath })
+    assert.ok((await stat(presetPath)).isFile())
+    assert.ok((await stat(join(target, 'preset.yml'))).isFile())
+    assert.ok((await stat(join(target, PRESET_MARKER))).isFile())
+    assert.ok(fake.provided.has('multiModelOrchestrator'))
+    assert.equal(fake.routes[0].path, ORCHESTRATOR_SETTINGS_ENDPOINT)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
 test('host onChange touches an existing preset path', async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-change-'))
   try {
@@ -162,4 +308,5 @@ test('package declares bundle and client integration exports', () => {
   assert.equal(packageJson.exports['./host'], './host.js')
   assert.equal(packageJson.exports['./agent'], './agent.js')
   assert.equal(packageJson.exports['./client'], './lib/client.js')
+  assert.ok(packageJson.files.includes('src/preset.js'))
 })
