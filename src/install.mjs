@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { basename } from 'node:path'
-import { provisionPreset, defaultPresetTarget, DEFAULT_PRESET_ID } from './preset.js'
+import { provisionLegacyPreset, provisionPreset, defaultPresetTarget, DEFAULT_PRESET_ID } from './preset.js'
 
 function usage() {
   return [
@@ -34,7 +34,11 @@ export function parseArgs(argv) {
 export function install(options = {}) {
   const presetId = options.presetId ?? DEFAULT_PRESET_ID
   const target = options.target ?? defaultPresetTarget(presetId)
-  return provisionPreset({ target, presetId, force: options.force })
+  const result = provisionPreset({ target, presetId, force: options.force })
+  const compatibility = presetId === DEFAULT_PRESET_ID
+    ? provisionLegacyPreset({ primaryTarget: target })
+    : undefined
+  return { ...result, ...(compatibility === undefined ? {} : { compatibility }) }
 }
 
 const isMain = basename(process.argv[1] ?? '') === 'install.mjs'
@@ -44,6 +48,10 @@ if (isMain) {
     if (options.help) { console.log(usage()); process.exit(0) }
     const result = install(options)
     console.log((result.changed.length === 0 ? 'Preset is already current at ' : 'Provisioned the multi-model orchestrator preset at ') + result.target)
+    if (result.compatibility !== undefined && !result.compatibility.skipped && result.compatibility.changed.length > 0) {
+      console.log('Provisioned the legacy orchestrator preset at ' + result.compatibility.target)
+    }
+    if (result.compatibility?.skipped) console.warn('Preserved the existing legacy orchestrator preset at ' + result.compatibility.target)
     console.log('Open DSH Settings > Orchestrator to configure agents from existing models.')
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))

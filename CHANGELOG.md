@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-08-19
+
+### Fixed
+
+- Provisioned a non-destructive legacy `orchestrator` preset alias so sessions created with the historical ID can resume after installing or updating the plugin. Existing user-managed `orchestrator` presets are preserved.
+
 ## [0.6.0] - 2026-08-19
 
 ### Added
@@ -44,6 +50,7 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/releases/tag/v0.5.0

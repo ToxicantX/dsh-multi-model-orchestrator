@@ -1,8 +1,8 @@
 import { utimesSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { basename, dirname } from 'node:path'
 import z from '@deepseek-ai/schemastery'
 import { normalizeAgents } from './src/config.js'
-import { provisionPreset } from './src/preset.js'
+import { DEFAULT_PRESET_ID, provisionLegacyPreset, provisionPreset } from './src/preset.js'
 
 export const name = 'multi-model-orchestrator-settings'
 export const inject = ['settings', 'webServer']
@@ -108,7 +108,11 @@ export function settingsRoute(service) {
 }
 
 export function apply(ctx, config) {
-  if (config.presetPath !== undefined) provisionPreset({ target: dirname(config.presetPath) })
+  if (config.presetPath !== undefined) {
+    const target = dirname(config.presetPath)
+    provisionPreset({ target })
+    if (basename(target) === DEFAULT_PRESET_ID) provisionLegacyPreset({ primaryTarget: target })
+  }
   const service = new MultiModelOrchestratorSettings(ctx, config)
   ctx.provide('multiModelOrchestrator', service)
   ctx.effect(() => ctx.webServer.register(settingsRoute(service)))

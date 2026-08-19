@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,6 +8,7 @@ export const PRESET_MARKER = '.dsh-multi-model-orchestrator.json'
 export const PRESET_MARKER_SCHEMA = 1
 export const PRESET_MANAGED_BY = 'dsh-multi-model-orchestrator'
 export const DEFAULT_PRESET_ID = 'multi-model-orchestrator'
+export const LEGACY_PRESET_ID = 'orchestrator'
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const defaultSourceDir = join(packageRoot, 'preset')
@@ -99,4 +100,31 @@ export function provisionPreset({ target, presetId = DEFAULT_PRESET_ID, force = 
 export function defaultPresetTarget(presetId = DEFAULT_PRESET_ID) {
   validatePresetId(presetId)
   return join(process.env.DSH_HOME || join(homedir(), '.dsh'), '.agent-presets', presetId)
+}
+
+export function provisionLegacyPreset({ primaryTarget, sourceDir = defaultSourceDir } = {}) {
+  if (!primaryTarget) throw new Error('Primary preset target is required')
+  const target = join(dirname(primaryTarget), LEGACY_PRESET_ID)
+  if (!existsSync(target)) {
+    return { ...provisionPreset({ target, presetId: LEGACY_PRESET_ID, sourceDir }), skipped: false }
+  }
+  const markerBytes = readOptional(join(target, PRESET_MARKER))
+  if (markerBytes === undefined) return { target, changed: [], skipped: true, reason: 'existing-unmanaged' }
+  let marker
+  try { marker = JSON.parse(markerBytes.toString('utf8')) } catch {
+    return { target, changed: [], skipped: true, reason: 'invalid-marker' }
+  }
+  const validMarker = marker?.schema === PRESET_MARKER_SCHEMA
+    && marker?.managedBy === PRESET_MANAGED_BY
+    && typeof marker?.files === 'object'
+    && marker.files !== null
+    && managedFiles.every(name => typeof marker.files[name] === 'string' && /^[a-f0-9]{64}$/u.test(marker.files[name]))
+  if (!validMarker) return { target, changed: [], skipped: true, reason: 'foreign-marker' }
+  for (const name of managedFiles) {
+    const content = readOptional(join(target, name))
+    if (content !== undefined && marker.files[name] !== hash(content)) {
+      return { target, changed: [], skipped: true, reason: 'managed-content-changed' }
+    }
+  }
+  return { ...provisionPreset({ target, presetId: LEGACY_PRESET_ID, sourceDir }), skipped: false }
 }

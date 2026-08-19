@@ -9,7 +9,7 @@ import packageJson from '../package.json' with { type: 'json' }
 import hostPlugin, { Config as HostConfig, ORCHESTRATOR_SETTINGS_ENDPOINT, ORCHESTRATOR_SETTINGS_NAMESPACE, AgentSettingsSchema, SettingsSchema, MultiModelOrchestratorSettings, apply as applyHost, inject as hostInject, settingsRoute } from '../host.js'
 import { AGENT_WARNING_THRESHOLD, DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT, normalizeAgents } from '../src/config.js'
 import { install, parseArgs } from '../src/install.mjs'
-import { PRESET_MARKER, provisionPreset } from '../src/preset.js'
+import { LEGACY_PRESET_ID, PRESET_MARKER, provisionLegacyPreset, provisionPreset } from '../src/preset.js'
 
 const agent = (id, overrides = {}) => ({ id, provider: 'provider-' + id, model: 'model-' + id, description: 'Own ' + id + '.', ...overrides })
 
@@ -73,6 +73,37 @@ test('installer copies exactly the fixed orchestrator preset and no agent data r
     assert.doesNotMatch(output, /file ownership|acceptance checks|Do not delegate these responsibilities/u)
     assert.match(await readFile(join(target, 'preset.yml'), 'utf8'), /multi-model orchestrator/iu)
     assert.deepEqual((await readdir(target)).sort(), [PRESET_MARKER, 'agent.cordis.yml', 'preset.yml'].sort())
+    assert.equal(result.compatibility.target, join(root, 'presets', LEGACY_PRESET_ID))
+    assert.equal(result.compatibility.skipped, false)
+    assert.equal(await readFile(join(result.compatibility.target, 'agent.cordis.yml'), 'utf8'), output)
+    assert.deepEqual((await readdir(result.compatibility.target)).sort(), [PRESET_MARKER, 'agent.cordis.yml', 'preset.yml'].sort())
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('legacy compatibility provisioning preserves unmanaged preset directories', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-compatibility-'))
+  try {
+    const primaryTarget = join(root, 'presets', 'multi-model-orchestrator')
+    const legacyTarget = join(root, 'presets', LEGACY_PRESET_ID)
+    await mkdir(legacyTarget, { recursive: true })
+    await writeFile(join(legacyTarget, 'agent.cordis.yml'), 'user-owned preset\n')
+    const result = await install({ target: primaryTarget, force: false })
+    assert.equal(result.compatibility.skipped, true)
+    assert.equal(result.compatibility.reason, 'existing-unmanaged')
+    assert.equal(await readFile(join(legacyTarget, 'agent.cordis.yml'), 'utf8'), 'user-owned preset\n')
+    assert.deepEqual((await readdir(legacyTarget)).sort(), ['agent.cordis.yml'])
+
+    const direct = provisionLegacyPreset({ primaryTarget })
+    assert.equal(direct.skipped, true)
+    assert.equal(direct.reason, 'existing-unmanaged')
+
+    const managedPrimary = join(root, 'managed', 'multi-model-orchestrator')
+    const managed = provisionLegacyPreset({ primaryTarget: managedPrimary })
+    await writeFile(join(managed.target, 'preset.yml'), 'user-edited metadata\n')
+    const preserved = provisionLegacyPreset({ primaryTarget: managedPrimary })
+    assert.equal(preserved.skipped, true)
+    assert.equal(preserved.reason, 'managed-content-changed')
+    assert.equal(await readFile(join(managed.target, 'preset.yml'), 'utf8'), 'user-edited metadata\n')
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
@@ -280,6 +311,8 @@ test('host activation provisions the preset before registering its service and r
     assert.ok((await stat(presetPath)).isFile())
     assert.ok((await stat(join(target, 'preset.yml'))).isFile())
     assert.ok((await stat(join(target, PRESET_MARKER))).isFile())
+    assert.ok((await stat(join(root, LEGACY_PRESET_ID, 'agent.cordis.yml'))).isFile())
+    assert.ok((await stat(join(root, LEGACY_PRESET_ID, PRESET_MARKER))).isFile())
     assert.ok(fake.provided.has('multiModelOrchestrator'))
     assert.equal(fake.routes[0].path, ORCHESTRATOR_SETTINGS_ENDPOINT)
   } finally { await rm(root, { recursive: true, force: true }) }
