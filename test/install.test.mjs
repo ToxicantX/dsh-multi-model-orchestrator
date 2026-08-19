@@ -76,6 +76,7 @@ test('installer copies exactly the fixed orchestrator preset and no agent data r
     assert.equal(result.compatibility.target, join(root, 'presets', LEGACY_PRESET_ID))
     assert.equal(result.compatibility.skipped, false)
     assert.equal(await readFile(join(result.compatibility.target, 'agent.cordis.yml'), 'utf8'), output)
+    assert.match(await readFile(join(result.compatibility.target, 'preset.yml'), 'utf8'), /Compatibility alias for sessions created with the legacy orchestrator preset ID[.]/u)
     assert.deepEqual((await readdir(result.compatibility.target)).sort(), [PRESET_MARKER, 'agent.cordis.yml', 'preset.yml'].sort())
   } finally { await rm(root, { recursive: true, force: true }) }
 })
@@ -104,6 +105,14 @@ test('legacy compatibility provisioning preserves unmanaged preset directories',
     assert.equal(preserved.skipped, true)
     assert.equal(preserved.reason, 'managed-content-changed')
     assert.equal(await readFile(join(managed.target, 'preset.yml'), 'utf8'), 'user-edited metadata\n')
+
+    const oldPrimary = join(root, 'upgrade', 'multi-model-orchestrator')
+    const oldLegacy = join(root, 'upgrade', LEGACY_PRESET_ID)
+    provisionPreset({ target: oldLegacy, presetId: LEGACY_PRESET_ID })
+    const upgraded = provisionLegacyPreset({ primaryTarget: oldPrimary })
+    assert.equal(upgraded.skipped, false)
+    assert.deepEqual(upgraded.changed, ['preset.yml'])
+    assert.match(await readFile(join(oldLegacy, 'preset.yml'), 'utf8'), /Compatibility alias for sessions created with the legacy orchestrator preset ID[.]/u)
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
@@ -342,4 +351,5 @@ test('package declares bundle and client integration exports', () => {
   assert.equal(packageJson.exports['./agent'], './agent.js')
   assert.equal(packageJson.exports['./client'], './lib/client.js')
   assert.ok(packageJson.files.includes('src/preset.js'))
+  assert.ok(packageJson.files.includes('preset-legacy/'))
 })

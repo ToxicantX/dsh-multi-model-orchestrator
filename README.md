@@ -38,7 +38,7 @@ Install the plugin in the DSH Web profile:
 dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 ~~~
 
-Restart DSH Web after installation and refresh the browser. The plugin provisions and maintains its Agent preset automatically when the Host starts. It also provisions the legacy `orchestrator` preset ID so existing sessions created with that ID can resume; an existing user-managed preset at that ID is never overwritten.
+Restart DSH Web after installation and refresh the browser. The plugin provisions and maintains its Agent preset automatically when the Host starts. It also provisions the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding that compatibility entry from Web selection lists; an existing user-managed preset at that ID is never overwritten.
 
 When running DSH from a source checkout, use `pnpm dsh` instead of `dsh` in the command.
 
@@ -85,7 +85,7 @@ pnpm test
 Release management follows [Semantic Versioning](https://semver.org/) (SemVer). Record user-facing changes in [CHANGELOG.md](CHANGELOG.md), create tags as `vX.Y.Z`, and run the local preflight:
 
 ~~~powershell
-pnpm release:check v0.6.1
+pnpm release:check v0.6.2
 ~~~
 
 Pushing a matching `vX.Y.Z` tag triggers verification and a GitHub Release with generated notes. npm publishing is not automatic.
@@ -130,7 +130,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 ~~~
 
-安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会自动预置并维护 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复；如果用户已自行管理同名预设，插件不会覆盖。
+安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会自动预置并维护 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复，但不会在 Web 预设选择列表中显示该兼容项；如果用户已自行管理同名预设，插件不会覆盖。
 
 如果通过 DSH 源码仓库运行，请将命令中的 `dsh` 替换为 `pnpm dsh`。
 
@@ -177,7 +177,7 @@ pnpm test
 发布管理遵循[语义化版本](https://semver.org/)（SemVer）。请在 [CHANGELOG.md](CHANGELOG.md) 记录面向用户的变更，使用 `vX.Y.Z` 格式创建 tag，并运行本地预检：
 
 ~~~powershell
-pnpm release:check v0.6.1
+pnpm release:check v0.6.2
 ~~~
 
 推送匹配的 `vX.Y.Z` tag 会触发验证并创建带自动生成说明的 GitHub Release。npm 发布不会自动执行。

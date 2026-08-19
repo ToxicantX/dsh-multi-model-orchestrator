@@ -1,0 +1,3 @@
+name: Multi-model orchestrator
+description: Compatibility alias for sessions created with the legacy orchestrator preset ID.
+order: 30

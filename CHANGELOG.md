@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-08-19
+
+### Fixed
+
+- Hid the legacy `orchestrator` compatibility preset from Web selection lists while keeping it available to resume existing sessions.
+
 ## [0.6.1] - 2026-08-19
 
 ### Fixed
@@ -50,7 +56,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/releases/tag/v0.5.0

@@ -12,6 +12,7 @@ export const LEGACY_PRESET_ID = 'orchestrator'
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const defaultSourceDir = join(packageRoot, 'preset')
+const defaultLegacySourceDir = join(packageRoot, 'preset-legacy')
 const managedFiles = ['agent.cordis.yml', 'preset.yml']
 // v0.5.0 predates the marker; exact bundle hashes allow one safe managed upgrade.
 const knownUnmarkedBundles = [{
@@ -102,7 +103,7 @@ export function defaultPresetTarget(presetId = DEFAULT_PRESET_ID) {
   return join(process.env.DSH_HOME || join(homedir(), '.dsh'), '.agent-presets', presetId)
 }
 
-export function provisionLegacyPreset({ primaryTarget, sourceDir = defaultSourceDir } = {}) {
+export function provisionLegacyPreset({ primaryTarget, sourceDir = defaultLegacySourceDir } = {}) {
   if (!primaryTarget) throw new Error('Primary preset target is required')
   const target = join(dirname(primaryTarget), LEGACY_PRESET_ID)
   if (!existsSync(target)) {
