@@ -146,15 +146,20 @@ test('empty service snapshot mounts no children and explains configuration state
   assert.match(ctx.sections[0].text, /Settings > Orchestrator/)
 })
 
-test('role guidance lists configured roles and delegation policy', () => {
+test('role guidance requires balanced delegation for non-trivial work', () => {
   const text = roleGuidance(agents)
   assert.match(text, /Available specialists:/)
   assert.match(text, /subagent_reviewer: Review independently/)
-  assert.match(text, /Delegate when a specialist can move the work forward/)
+  assert.match(text, /Use specialists actively/)
+  assert.match(text, /more than a trivial one-step change/)
+  assert.match(text, /self-contained implementation, review, or investigation subtask/)
+  assert.match(text, /delegate at least one such subtask before doing equivalent work yourself/)
+  assert.match(text, /Handle the task entirely yourself when it is a trivial one-step change or no meaningful subtask can be isolated/)
   assert.match(text, /Start independent tasks together/)
   assert.match(text, /wait for prerequisites before starting dependent work/)
+  assert.match(text, /Do not duplicate delegated work while it is running/)
   assert.match(text, /continue the existing child instead of starting a duplicate/)
   assert.match(text, /final checks appropriate to the risk/)
-  assert.doesNotMatch(text, /file ownership|acceptance checks|At each step boundary|cancel or mark as non-blocking/u)
+  assert.doesNotMatch(text, /file ownership|acceptance checks|At each step boundary|cancel or mark as non-blocking|fixed delegation ratio/u)
   assert.match(roleGuidance([]), /No orchestrator specialists are configured/)
 })

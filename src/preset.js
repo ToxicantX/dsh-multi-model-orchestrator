@@ -14,11 +14,25 @@ const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)))
 const defaultSourceDir = join(packageRoot, 'preset')
 const defaultLegacySourceDir = join(packageRoot, 'preset-legacy')
 const managedFiles = ['agent.cordis.yml', 'preset.yml']
-// v0.5.0 predates the marker; exact bundle hashes allow one safe managed upgrade.
-const knownUnmarkedBundles = [{
-  'agent.cordis.yml': '82344873a4682182237d8db43e339eb59f90d0687e4ed59516f260a235e45e4b',
-  'preset.yml': 'ded7e5cabec065f2d37e52bda8ecf4d8bcc1eda0ddc2900e5464e48f9902cb80',
-}]
+// Official pre-marker bundles can be adopted without confusing user edits for package content.
+const knownUnmarkedBundles = [
+  {
+    'agent.cordis.yml': '1cfc1be8f18a25d3503bd9af18f3f0ca03a58d7d37f38f8b7602e4b199081f1e',
+    'preset.yml': 'ded7e5cabec065f2d37e52bda8ecf4d8bcc1eda0ddc2900e5464e48f9902cb80',
+  },
+  {
+    'agent.cordis.yml': 'eb768142bda86387bac28287e44ebae2f4c9c200b2c8d2d2b133b058ebce534a',
+    'preset.yml': 'd76635fe29f3d5d289a145dde15eadfc25db60243e0343c62c57d7013d6930ee',
+  },
+  {
+    'agent.cordis.yml': '82344873a4682182237d8db43e339eb59f90d0687e4ed59516f260a235e45e4b',
+    'preset.yml': 'ded7e5cabec065f2d37e52bda8ecf4d8bcc1eda0ddc2900e5464e48f9902cb80',
+  },
+  {
+    'agent.cordis.yml': '41a68bff83aaa4c60887611dc911f57763ea6958b71706fb67da29e35f8afb46',
+    'preset.yml': 'd76635fe29f3d5d289a145dde15eadfc25db60243e0343c62c57d7013d6930ee',
+  },
+]
 
 function hash(content) {
   return createHash('sha256').update(content).digest('hex')
@@ -103,14 +117,22 @@ export function defaultPresetTarget(presetId = DEFAULT_PRESET_ID) {
   return join(process.env.DSH_HOME || join(homedir(), '.dsh'), '.agent-presets', presetId)
 }
 
-export function provisionLegacyPreset({ primaryTarget, sourceDir = defaultLegacySourceDir } = {}) {
+export function provisionLegacyPreset({ primaryTarget, sourceDir = defaultLegacySourceDir, legacyBundles = knownUnmarkedBundles } = {}) {
   if (!primaryTarget) throw new Error('Primary preset target is required')
   const target = join(dirname(primaryTarget), LEGACY_PRESET_ID)
   if (!existsSync(target)) {
-    return { ...provisionPreset({ target, presetId: LEGACY_PRESET_ID, sourceDir }), skipped: false }
+    return { ...provisionPreset({ target, presetId: LEGACY_PRESET_ID, sourceDir, legacyBundles }), skipped: false }
   }
   const markerBytes = readOptional(join(target, PRESET_MARKER))
-  if (markerBytes === undefined) return { target, changed: [], skipped: true, reason: 'existing-unmanaged' }
+  if (markerBytes === undefined) {
+    const present = managedFiles.flatMap(name => {
+      const content = readOptional(join(target, name))
+      return content === undefined ? [] : [[name, content]]
+    })
+    const recognized = present.length === 0 || legacyBundles.some(bundle => present.every(([name, content]) => bundle[name] === hash(content)))
+    if (!recognized) return { target, changed: [], skipped: true, reason: 'existing-unmanaged' }
+    return { ...provisionPreset({ target, presetId: LEGACY_PRESET_ID, sourceDir, legacyBundles }), skipped: false }
+  }
   let marker
   try { marker = JSON.parse(markerBytes.toString('utf8')) } catch {
     return { target, changed: [], skipped: true, reason: 'invalid-marker' }
@@ -127,5 +149,5 @@ export function provisionLegacyPreset({ primaryTarget, sourceDir = defaultLegacy
       return { target, changed: [], skipped: true, reason: 'managed-content-changed' }
     }
   }
-  return { ...provisionPreset({ target, presetId: LEGACY_PRESET_ID, sourceDir }), skipped: false }
+  return { ...provisionPreset({ target, presetId: LEGACY_PRESET_ID, sourceDir, legacyBundles }), skipped: false }
 }

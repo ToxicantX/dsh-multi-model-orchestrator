@@ -12,7 +12,7 @@ DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web set
 
 When a session uses the **Multi-model orchestrator** preset, every configured Agent becomes an independent subagent tool that the primary Agent can delegate work to.
 
-The primary Agent decides when delegation is useful and remains responsible for the integrated result. Independent tasks can run in parallel, dependent work stays ordered, and follow-up changes reuse the same continuable child. The primary Agent reviews returned work and runs final checks appropriate to the risk.
+The primary Agent uses configured specialists actively and remains responsible for the integrated result. Non-trivial work delegates at least one separable implementation, review, or investigation task, while truly small changes can stay local. Independent tasks can run in parallel, dependent work stays ordered, and follow-up changes reuse the same continuable child without duplicating delegated work.
 
 ### Features
 
@@ -21,6 +21,7 @@ The primary Agent decides when delegation is useful and remains responsible for 
 - Give each Agent a stable ID and development scope.
 - Select an optional reasoning effort from the exact levels advertised by the Agent's model.
 - Set an optional maximum output-token limit per Agent.
+- Delegate at least one separable specialist task for non-trivial work, while keeping truly small changes local.
 - Run independent work in parallel, keep dependent work ordered, and reuse continuable children for follow-ups.
 - Keep each running session on the Agent configuration it started with.
 
@@ -38,7 +39,7 @@ Install the plugin in the DSH Web profile:
 dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 ~~~
 
-Restart DSH Web after installation and refresh the browser. The plugin provisions and maintains its Agent preset automatically when the Host starts. It also provisions the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding that compatibility entry from Web selection lists; an existing user-managed preset at that ID is never overwritten.
+Restart DSH Web after installation and refresh the browser. The plugin provisions and maintains its Agent preset automatically when the Host starts. It also provisions the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding official-name compatibility entries from Web selection lists. Exact official pre-marker copies are adopted safely; customized user-managed presets are never overwritten and remain visible when given a distinct name.
 
 When running DSH from a source checkout, use `pnpm dsh` instead of `dsh` in the command.
 
@@ -85,7 +86,7 @@ pnpm test
 Release management follows [Semantic Versioning](https://semver.org/) (SemVer). Record user-facing changes in [CHANGELOG.md](CHANGELOG.md), create tags as `vX.Y.Z`, and run the local preflight:
 
 ~~~powershell
-pnpm release:check v0.6.2
+pnpm release:check v0.6.3
 ~~~
 
 Pushing a matching `vX.Y.Z` tag triggers verification and a GitHub Release with generated notes. npm publishing is not automatic.
@@ -104,7 +105,7 @@ DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent �
 
 Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent 都会成为独立的子 Agent 工具，供主 Agent 按任务需要进行委派。
 
-主 Agent 根据实际收益决定是否委派，并对集成结果负责。独立任务可以并行，依赖任务保持有序，同一任务的后续修改复用已有的可继续子 Agent。主 Agent 检查返回结果，并按风险执行必要的最终验证。
+主 Agent 主动使用已配置的 specialist，并对集成结果负责。非简单工作至少委派一个可独立实现、审查或调查的子任务，真正的一步小改仍可由主 Agent 直接完成。独立任务可以并行，依赖任务保持有序，同一任务的后续修改复用已有的可继续子 Agent，且主 Agent 不重复执行已委派范围。
 
 ### 功能特性
 
@@ -113,6 +114,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 - 为每个 Agent 设置固定 ID 和开发职责。
 - 从对应模型实际提供的等级中选择可选推理等级。
 - 为每个 Agent 设置可选的最大输出 Token。
+- 非简单工作至少委派一个可独立 specialist 子任务，真正的小改仍可直接完成。
 - 并行处理独立任务，有序处理依赖任务，并为后续修改复用可继续子 Agent。
 - 运行中的 Session 保持启动时的 Agent 配置。
 
@@ -130,7 +132,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 ~~~
 
-安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会自动预置并维护 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复，但不会在 Web 预设选择列表中显示该兼容项；如果用户已自行管理同名预设，插件不会覆盖。
+安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会自动预置并维护 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复，并从 Web 选择列表中隐藏使用官方显示名的兼容项。内容完全匹配官方旧版的无 marker preset 会被安全收编；经过自定义的用户 preset 不会被覆盖，改用不同名称时仍保持可见。
 
 如果通过 DSH 源码仓库运行，请将命令中的 `dsh` 替换为 `pnpm dsh`。
 
@@ -177,7 +179,7 @@ pnpm test
 发布管理遵循[语义化版本](https://semver.org/)（SemVer）。请在 [CHANGELOG.md](CHANGELOG.md) 记录面向用户的变更，使用 `vX.Y.Z` 格式创建 tag，并运行本地预检：
 
 ~~~powershell
-pnpm release:check v0.6.2
+pnpm release:check v0.6.3
 ~~~
 
 推送匹配的 `vX.Y.Z` tag 会触发验证并创建带自动生成说明的 GitHub Release。npm 发布不会自动执行。

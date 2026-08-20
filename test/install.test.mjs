@@ -65,12 +65,17 @@ test('installer copies exactly the fixed orchestrator preset and no agent data r
     assert.doesNotMatch(output, /^\s+(?:agents|provider|model|apiKey|baseURL):/gim)
     assert.doesNotMatch(output, /(?:API[_ ]?KEY|BASEURL|apiKey|baseURL|provider:|model:)/iu)
     assert.equal((output.match(/dsh-multi-model-orchestrator\/agent/gu) ?? []).length, 1)
-    assert.match(output, /Use the configured specialists when delegation is useful/)
+    assert.match(output, /Use the configured specialists as active collaborators/)
+    assert.match(output, /more than a trivial one-step change/)
+    assert.match(output, /self-contained implementation, review, or investigation subtask/)
+    assert.match(output, /delegate at least one such subtask before doing equivalent work yourself/)
+    assert.match(output, /Handle the task entirely yourself when it is a trivial one-step change or no meaningful subtask can be isolated/)
     assert.match(output, /Start independent delegated tasks together/)
     assert.match(output, /wait for prerequisites before starting dependent work/)
+    assert.match(output, /Do not duplicate delegated work while it is running/)
     assert.match(output, /continue the existing child instead of starting a duplicate/)
     assert.match(output, /final checks appropriate to the risk/)
-    assert.doesNotMatch(output, /file ownership|acceptance checks|Do not delegate these responsibilities/u)
+    assert.doesNotMatch(output, /file ownership|acceptance checks|Do not delegate these responsibilities|fixed delegation ratio/u)
     assert.match(await readFile(join(target, 'preset.yml'), 'utf8'), /multi-model orchestrator/iu)
     assert.deepEqual((await readdir(target)).sort(), [PRESET_MARKER, 'agent.cordis.yml', 'preset.yml'].sort())
     assert.equal(result.compatibility.target, join(root, 'presets', LEGACY_PRESET_ID))
@@ -113,6 +118,33 @@ test('legacy compatibility provisioning preserves unmanaged preset directories',
     assert.equal(upgraded.skipped, false)
     assert.deepEqual(upgraded.changed, ['preset.yml'])
     assert.match(await readFile(join(oldLegacy, 'preset.yml'), 'utf8'), /Compatibility alias for sessions created with the legacy orchestrator preset ID[.]/u)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('legacy compatibility adopts an exact historical unmarked preset', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-orchestrator-historical-legacy-'))
+  try {
+    const primaryTarget = join(root, 'multi-model-orchestrator')
+    const target = join(root, LEGACY_PRESET_ID)
+    await mkdir(target, { recursive: true })
+    const historical = {
+      'agent.cordis.yml': 'historical official agent preset\n',
+      'preset.yml': 'historical official metadata\n',
+    }
+    for (const [name, content] of Object.entries(historical)) await writeFile(join(target, name), content)
+    const legacyBundles = [Object.fromEntries(Object.entries(historical).map(([name, content]) => [name, createHash('sha256').update(content).digest('hex')]))]
+
+    const adopted = provisionLegacyPreset({ primaryTarget, legacyBundles })
+    assert.equal(adopted.skipped, false)
+    assert.equal(adopted.adopted, true)
+    assert.equal(adopted.migrated, true)
+    assert.deepEqual(adopted.changed, ['agent.cordis.yml', 'preset.yml', PRESET_MARKER])
+    assert.equal(await readFile(join(target, 'agent.cordis.yml'), 'utf8'), await readFile(new URL('../preset-legacy/agent.cordis.yml', import.meta.url), 'utf8'))
+    assert.equal(await readFile(join(target, 'preset.yml'), 'utf8'), await readFile(new URL('../preset-legacy/preset.yml', import.meta.url), 'utf8'))
+
+    const current = provisionLegacyPreset({ primaryTarget, legacyBundles })
+    assert.equal(current.skipped, false)
+    assert.deepEqual(current.changed, [])
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 

@@ -1,5 +1,5 @@
 export const LEGACY_PRESET_ID = 'orchestrator'
-export const LEGACY_PRESET_DESCRIPTION = 'Compatibility alias for sessions created with the legacy orchestrator preset ID.'
+export const ORCHESTRATOR_PRESET_NAME = 'Multi-model orchestrator'
 
 interface PresetRow {
   id: string
@@ -26,7 +26,7 @@ export function hideLegacyPresetFromCatalog(api: AgentPresetsApi) {
         value: {
           ...response.result.value,
           presets: response.result.value.presets.filter(preset => !(
-            preset.id === LEGACY_PRESET_ID && preset.description === LEGACY_PRESET_DESCRIPTION
+            preset.id === LEGACY_PRESET_ID && preset.name === ORCHESTRATOR_PRESET_NAME
           )),
         },
       },

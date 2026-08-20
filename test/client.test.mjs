@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import { hideLegacyPresetFromCatalog, LEGACY_PRESET_DESCRIPTION, LEGACY_PRESET_ID } from '../client/presetCatalog.ts'
+import { hideLegacyPresetFromCatalog, LEGACY_PRESET_ID, ORCHESTRATOR_PRESET_NAME } from '../client/presetCatalog.ts'
 import { agentCountWarning, catalogOptions, cleanAgents, createAgentDraft, validateAgents, withRenderKey } from '../client/state.ts'
 import { AGENT_WARNING_THRESHOLD, DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT } from '../src/config.js'
 
@@ -72,7 +72,11 @@ test('hides the legacy preset from client catalog responses and restores the API
     result: {
       ok: true,
       value: {
-        presets: [{ id: 'standard' }, { id: 'multi-model-orchestrator' }, { id: LEGACY_PRESET_ID, description: LEGACY_PRESET_DESCRIPTION }],
+        presets: [
+          { id: 'standard' },
+          { id: 'multi-model-orchestrator', name: ORCHESTRATOR_PRESET_NAME },
+          { id: LEGACY_PRESET_ID, name: ORCHESTRATOR_PRESET_NAME, description: 'Historical description that differs by version' },
+        ],
         authorable: true,
       },
     },
@@ -88,10 +92,15 @@ test('hides the legacy preset from client catalog responses and restores the API
   assert.equal(api.list, originalList)
   assert.equal(await api.list({}), response)
 
-  const userPresetResponse = { result: { ok: true, value: { presets: [{ id: LEGACY_PRESET_ID, description: 'User preset' }] } } }
+  const userPresetResponse = { result: { ok: true, value: { presets: [{ id: LEGACY_PRESET_ID, name: 'User preset' }] } } }
   const userApi = { async list() { return userPresetResponse } }
   hideLegacyPresetFromCatalog(userApi)
   assert.deepEqual((await userApi.list({})).result.value.presets, userPresetResponse.result.value.presets)
+
+  const unnamedPresetResponse = { result: { ok: true, value: { presets: [{ id: LEGACY_PRESET_ID }] } } }
+  const unnamedApi = { async list() { return unnamedPresetResponse } }
+  hideLegacyPresetFromCatalog(unnamedApi)
+  assert.deepEqual((await unnamedApi.list({})).result.value.presets, unnamedPresetResponse.result.value.presets)
 
   const failed = { result: { ok: false, error: { message: 'unavailable' } } }
   const failedApi = { async list() { return failed } }

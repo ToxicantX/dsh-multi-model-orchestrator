@@ -40,9 +40,10 @@ export function roleGuidance(agents) {
     'Available specialists:',
     ...agents.map(agent => '- subagent_' + agent.id + ': ' + agent.description),
     '',
-    'Delegate when a specialist can move the work forward; handle small local tasks directly when delegation would add overhead.',
+    'Use specialists actively. When work is more than a trivial one-step change and contains a self-contained implementation, review, or investigation subtask, delegate at least one such subtask before doing equivalent work yourself.',
+    'Handle the task entirely yourself when it is a trivial one-step change or no meaningful subtask can be isolated.',
     'Start independent tasks together, and wait for prerequisites before starting dependent work.',
-    'Give each child a clear objective and enough context. For follow-up work on the same task, continue the existing child instead of starting a duplicate.',
+    'Give each child a clear objective and enough context. Do not duplicate delegated work while it is running. For follow-up work on the same task, continue the existing child instead of starting a duplicate.',
     'Review returned work, integrate it, and run final checks appropriate to the risk.',
   ].join('\n')
 }

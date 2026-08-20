@@ -4,6 +4,13 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-08-19
+
+### Fixed
+
+- Restored balanced specialist participation under global Agent instructions: non-trivial work now delegates at least one separable task, truly small changes stay local, and the Primary avoids duplicating work while a child is running.
+- Prevented duplicate orchestrator preset choices across historical installations by adopting exact official pre-marker bundles and hiding legacy entries by their stable ID and official display name instead of a version-specific description.
+
 ## [0.6.2] - 2026-08-19
 
 ### Fixed
@@ -56,7 +63,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.5.0...v0.6.0
