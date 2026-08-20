@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { MAX_AGENT_COUNT } from '../src/config.js'
 import {
-  agentCountWarning,
   catalogOptions,
   cleanAgents,
   createAgentDraft,
@@ -196,7 +195,7 @@ export function SettingsOrchestratorSection({ api, t }: ClientContext) {
         <span aria-hidden="true">+</span> {t('add')}
       </button>
     </div>
-    {agentCountWarning(agents.length) && <p role="status">{t('agentCountWarning')}</p>}
+    {agents.length > MAX_AGENT_COUNT && <p role="status">{t('legacyAgentLimit')}</p>}
     {options.length === 0 && <p role="status">{t('noModels')}</p>}
     {agents.length === 0 && <p role="status">{t('empty')}</p>}
     <div style={list}>

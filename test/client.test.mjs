@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { hideLegacyPresetFromCatalog, LEGACY_PRESET_ID, ORCHESTRATOR_PRESET_NAME } from '../client/presetCatalog.ts'
-import { agentCountWarning, catalogOptions, cleanAgents, createAgentDraft, validateAgents, withRenderKey } from '../client/state.ts'
-import { AGENT_WARNING_THRESHOLD, DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT } from '../src/config.js'
+import { catalogOptions, cleanAgents, createAgentDraft, validateAgents, withRenderKey } from '../client/state.ts'
+import { DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT } from '../src/config.js'
 
 const input = (id, overrides = {}) => ({ id, provider: 'p', model: 'm', description: '', ...overrides })
 
@@ -58,13 +58,21 @@ test('validates normalized IDs, models, reasoning, and token limits', () => {
   assert.match(validateAgents([input('a')], []), /no longer available/)
 })
 
-test('enforces the Agent cap and exposes the soft warning threshold', () => {
+test('enforces the three-Agent cap at the exact boundaries', () => {
+  assert.equal(MAX_AGENT_COUNT, 3)
   const maximum = Array.from({ length: MAX_AGENT_COUNT }, (_, index) => input('agent-' + index))
   assert.equal(validateAgents(maximum), undefined)
-  assert.match(validateAgents([...maximum, input('overflow')]), /must not exceed 32/)
-  assert.equal(agentCountWarning(AGENT_WARNING_THRESHOLD), false)
-  assert.equal(agentCountWarning(AGENT_WARNING_THRESHOLD + 1), true)
-  assert.equal(agentCountWarning(MAX_AGENT_COUNT + 1), false)
+  assert.match(validateAgents([...maximum, input('overflow')]), /must not exceed 3/)
+})
+
+test('explains the active limit for an oversized legacy roster', async () => {
+  const [section, client] = await Promise.all([
+    readFile(new URL('../client/SettingsOrchestratorSection.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../client/index.ts', import.meta.url), 'utf8'),
+  ])
+  assert.match(section, /agents[.]length > MAX_AGENT_COUNT.*legacyAgentLimit/u)
+  assert.match(client, /Only the first 3 are active; remove the extras before saving[.]/u)
+  assert.match(client, /当前仅启用前 3 个；请删除多余 Agent 后保存。/u)
 })
 
 test('hides the legacy preset from client catalog responses and restores the API', async () => {

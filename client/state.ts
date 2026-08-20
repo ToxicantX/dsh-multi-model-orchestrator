@@ -1,4 +1,4 @@
-import { AGENT_ID, AGENT_WARNING_THRESHOLD, DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT } from '../src/config.js'
+import { AGENT_ID, DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT } from '../src/config.js'
 
 export const SETTINGS_NAMESPACE = 'multi-model-orchestrator'
 
@@ -125,10 +125,6 @@ export function validateAgents(agents: readonly AgentInput[], options?: readonly
       return validationMessage(t, 'maxTokensPositive', 'Max tokens must be a positive integer.')
     }
   }
-}
-
-export function agentCountWarning(count: number): boolean {
-  return count > AGENT_WARNING_THRESHOLD && count <= MAX_AGENT_COUNT
 }
 
 export function cleanAgents(agents: readonly AgentInput[]): AgentSettings[] {

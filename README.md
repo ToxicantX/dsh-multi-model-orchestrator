@@ -8,21 +8,22 @@ Configure and run a team of model-backed specialist Agents in [DeepSeek Harness]
 
 ### Overview
 
-DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can create up to 32 specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility.
+DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can create up to 3 specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility.
 
 When a session uses the **Multi-model orchestrator** preset, every configured Agent becomes an independent subagent tool that the primary Agent can delegate work to.
 
-The primary Agent uses configured specialists actively and remains responsible for the integrated result. Non-trivial work delegates at least one separable implementation, review, or investigation task, while truly small changes can stay local. Independent tasks can run in parallel, dependent work stays ordered, and follow-up changes reuse the same continuable child without duplicating delegated work.
+The primary Agent acts as the product owner and engineering manager rather than the default developer. For non-trivial work, it defines the outcome and acceptance criteria, decomposes non-overlapping scopes, and delegates development, investigation, testing, and review before implementation begins. Each specialist exclusively owns its delegated scope until it settles; the primary coordinates only non-overlapping work, waits on dependencies, integrates returned work, and performs final acceptance. Truly small one-step changes can stay local.
 
 ### Features
 
-- Create and remove up to 32 specialist Agents.
+- Create and remove up to 3 specialist Agents.
 - Select models already available in DSH.
 - Give each Agent a stable ID and development scope.
 - Select an optional reasoning effort from the exact levels advertised by the Agent's model.
 - Set an optional maximum output-token limit per Agent.
-- Delegate at least one separable specialist task for non-trivial work, while keeping truly small changes local.
-- Run independent work in parallel, keep dependent work ordered, and reuse continuable children for follow-ups.
+- Make the primary Agent responsible for requirements, planning, assignment, integration, and final acceptance.
+- Give specialists exclusive ownership of delegated development scopes so the primary cannot duplicate their work.
+- Map meaningful scopes to the best-fit available specialists, dispatch all independent matches together, wait on dependencies, and reuse continuable children for follow-ups without inventing work to fill capacity.
 - Keep each running session on the Agent configuration it started with.
 
 ### Requirements
@@ -40,6 +41,8 @@ dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 ~~~
 
 Restart DSH Web after installation and refresh the browser. The plugin provisions and maintains its Agent preset automatically when the Host starts. It also provisions the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding official-name compatibility entries from Web selection lists. Exact official pre-marker copies are adopted safely; customized user-managed presets are never overwritten and remain visible when given a distinct name.
+
+Existing settings with more than 3 Agents are preserved during an upgrade. The first 3 remain active, the settings page continues to show the complete roster, and the next save requires reducing it to 3 or fewer.
 
 When running DSH from a source checkout, use `pnpm dsh` instead of `dsh` in the command.
 
@@ -61,6 +64,8 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 8. Create a session with the **Multi-model orchestrator** preset.
 
 Create a new session after changing the Agent roster or model assignments. Sessions that are already running keep their original Agent configuration.
+
+During a non-trivial session, the primary Agent establishes acceptance criteria and assigns development scopes before editing. It treats the configured roster as execution capacity, maps every meaningful separable scope to the best-fit specialist, and starts all independent matches together up to the three-Agent limit. A suitable specialist is not kept idle while the primary performs development, but the primary does not invent work merely to use every Agent. A running specialist owns its assigned scope; the primary may coordinate other clearly disjoint scopes but waits instead of implementing the same outcome. After specialists return, the primary reviews integration boundaries and runs the final acceptance checks.
 
 ### Agent fields
 
@@ -86,7 +91,7 @@ pnpm test
 Release management follows [Semantic Versioning](https://semver.org/) (SemVer). Record user-facing changes in [CHANGELOG.md](CHANGELOG.md), create tags as `vX.Y.Z`, and run the local preflight:
 
 ~~~powershell
-pnpm release:check v0.6.3
+pnpm release:check v0.7.0
 ~~~
 
 Pushing a matching `vX.Y.Z` tag triggers verification and a GitHub Release with generated notes. npm publishing is not automatic.
@@ -101,21 +106,22 @@ pnpm dsh plugin --profile web add -w D:/path/to/dsh-multi-model-orchestrator
 
 ### 项目介绍
 
-DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent 编排功能。你可以创建最多 32 个专业 Agent，为每个 Agent 选择 DSH 中已有的模型，并设置清晰的职责。
+DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent 编排功能。你可以创建最多 3 个专业 Agent，为每个 Agent 选择 DSH 中已有的模型，并设置清晰的职责。
 
 Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent 都会成为独立的子 Agent 工具，供主 Agent 按任务需要进行委派。
 
-主 Agent 主动使用已配置的 specialist，并对集成结果负责。非简单工作至少委派一个可独立实现、审查或调查的子任务，真正的一步小改仍可由主 Agent 直接完成。独立任务可以并行，依赖任务保持有序，同一任务的后续修改复用已有的可继续子 Agent，且主 Agent 不重复执行已委派范围。
+主 Agent 的定位是产品负责人和工程项目经理，而不是默认开发者。面对非简单工作，它先明确目标与验收标准，拆分互不重叠的范围，并在实施开始前委派开发、调查、测试和审查。每个 specialist 在返回前独占其委派范围；主 Agent 只协调不重叠工作、等待依赖、集成返回结果并执行最终验收。真正的一步小改仍可直接完成。
 
 ### 功能特性
 
-- 创建和删除最多 32 个专业 Agent。
+- 创建和删除最多 3 个专业 Agent。
 - 直接选择 DSH 中已有的模型。
 - 为每个 Agent 设置固定 ID 和开发职责。
 - 从对应模型实际提供的等级中选择可选推理等级。
 - 为每个 Agent 设置可选的最大输出 Token。
-- 非简单工作至少委派一个可独立 specialist 子任务，真正的小改仍可直接完成。
-- 并行处理独立任务，有序处理依赖任务，并为后续修改复用可继续子 Agent。
+- 由主 Agent 负责需求、计划、分配、集成和最终验收。
+- specialist 独占已委派的开发范围，避免主 Agent 重复实现。
+- 将有效范围分配给最匹配的可用 specialist，同时启动所有独立匹配项、等待依赖并复用可继续子 Agent，且不为占满容量人为制造任务。
 - 运行中的 Session 保持启动时的 Agent 配置。
 
 ### 环境要求
@@ -133,6 +139,8 @@ dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 ~~~
 
 安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会自动预置并维护 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复，并从 Web 选择列表中隐藏使用官方显示名的兼容项。内容完全匹配官方旧版的无 marker preset 会被安全收编；经过自定义的用户 preset 不会被覆盖，改用不同名称时仍保持可见。
+
+升级时，已有的超过 3 个 Agent 的配置会被完整保留。运行时先启用前 3 个，设置页继续显示完整列表，并要求在下次保存前缩减到 3 个以内。
 
 如果通过 DSH 源码仓库运行，请将命令中的 `dsh` 替换为 `pnpm dsh`。
 
@@ -154,6 +162,8 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 8. 使用 **Multi-model orchestrator** 预设创建 Session。
 
 修改 Agent 列表或模型分配后，请创建新的 Session。已经运行的 Session 会继续使用启动时的 Agent 配置。
+
+在非简单 Session 中，主 Agent 会先确定验收标准并分配开发范围，再进入实施。它把已配置的 Agent 视为执行容量，将每个有效且可独立交付的范围分配给最匹配的 specialist，并在最多 3 个 Agent 的限制内同时启动所有独立匹配项。存在合适 specialist 时，主 Agent 不自行承担开发；但不会为了占满 Agent 人为制造任务。运行中的 specialist 独占其任务范围；主 Agent 可以协调其他明确不重叠的范围，但必须等待而不能并行实现相同目标。specialist 返回后，主 Agent 负责检查集成边界并执行最终验收。
 
 ### Agent 配置项
 
@@ -179,7 +189,7 @@ pnpm test
 发布管理遵循[语义化版本](https://semver.org/)（SemVer）。请在 [CHANGELOG.md](CHANGELOG.md) 记录面向用户的变更，使用 `vX.Y.Z` 格式创建 tag，并运行本地预检：
 
 ~~~powershell
-pnpm release:check v0.6.3
+pnpm release:check v0.7.0
 ~~~
 
 推送匹配的 `vX.Y.Z` tag 会触发验证并创建带自动生成说明的 GitHub Release。npm 发布不会自动执行。

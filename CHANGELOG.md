@@ -4,6 +4,13 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-20
+
+### Changed
+
+- Reframed orchestration around a product/engineering-manager Primary that defines acceptance criteria and delegates development before implementation, with exclusive child scope ownership, capacity-aware parallel dispatch, dependency waiting, and Primary-owned integration and final acceptance.
+- Limited the configured specialist roster to 3 Agents, removed the obsolete warning for rosters above 8, and preserved oversized legacy rosters for non-destructive reduction after upgrade.
+
 ## [0.6.3] - 2026-08-19
 
 ### Fixed
@@ -63,7 +70,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.3...v0.7.0
 [0.6.3]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.0...v0.6.1

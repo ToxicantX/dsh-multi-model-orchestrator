@@ -1,6 +1,5 @@
 export const AGENT_ID = /^[a-z][a-z0-9_-]{0,47}$/u
-export const MAX_AGENT_COUNT = 32
-export const AGENT_WARNING_THRESHOLD = 8
+export const MAX_AGENT_COUNT = 3
 export const DEFAULT_AGENT_DESCRIPTION = 'Implement and adjust the assigned code scope, add or update focused tests, inspect your diff, and run the checks that cover your changes before handoff. Report changed files, commands and results, risks, and blockers to the primary Agent; never claim completion when a required check fails.'
 
 function requiredString(value, label, maxLength = 512) {
@@ -13,7 +12,7 @@ function requiredString(value, label, maxLength = 512) {
 
 export function normalizeAgents(value, options = {}) {
   if (!Array.isArray(value) || (!options.allowEmpty && value.length === 0)) throw new Error('agents must be a non-empty array')
-  if (value.length > MAX_AGENT_COUNT) throw new Error('agents must not contain more than ' + MAX_AGENT_COUNT + ' entries')
+  if (!options.allowOverLimit && value.length > MAX_AGENT_COUNT) throw new Error('agents must not contain more than ' + MAX_AGENT_COUNT + ' entries')
   const ids = new Set()
   return value.map((entry, index) => {
     if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) throw new Error('agents[' + index + '] must be an object')
