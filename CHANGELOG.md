@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-08-21
+
+### Changed
+
+- Raised the DSH compatibility baseline and peer dependencies to 0.1.1-rc.1 after verifying the subagent integration contract remains compatible.
+
 ## [0.7.1] - 2026-08-21
 
 ### Fixed
@@ -76,7 +82,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.3...v0.7.0
 [0.6.3]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.2...v0.6.3

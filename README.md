@@ -28,7 +28,7 @@ The primary Agent acts as the product owner and engineering manager rather than 
 
 ### Requirements
 
-- DeepSeek Harness 0.1.0-rc.7 or a compatible newer release
+- DeepSeek Harness 0.1.1-rc.1 or a compatible newer release
 - Node.js 22.19 or newer
 - At least one model available in DSH **Settings > Models**
 
@@ -126,7 +126,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 
 ### 环境要求
 
-- DeepSeek Harness 0.1.0-rc.7 或兼容的新版本
+- DeepSeek Harness 0.1.1-rc.1 或兼容的新版本
 - Node.js 22.19 或更高版本
 - DSH **设置 > 模型** 中至少有一个可用模型
 
