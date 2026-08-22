@@ -50,6 +50,13 @@
       Wait for prerequisites before starting dependent work.
 
       Set run_in_background: false when the next step depends on that child or when no clearly non-overlapping work remains. Reuse the same continuable child for follow-up on the same task instead of starting a duplicate.
+      Use foreground child calls (set run_in_background: false) when no independent work remains; dependent follow-ups and final acceptance are foreground work. Do not repeatedly call list_agents just to pass time. Several minutes of a child running alone is not a stall.
+
+      Interrupt a child only for user cancellation, an explicit deadline, a confirmed deadlock, or verified repeated tool failure. Do not interrupt because a child has been running for several minutes or because one status observation is incomplete.
+
+      send_message queues the next turn and does not redirect current work. Treat delivery as neither a status update nor completion; let the current turn finish before acting on the queued follow-up.
+
+      Specialists stop after two occurrences of the same tool or execution-protocol error. Switch to the simplest valid alternative tool call or report the blocker, and avoid repeated calls that fail or produce no useful output.
 
       After all relevant children return, review, integrate, and run final acceptance checks. Handle a trivial one-step change entirely yourself. When no specialists are configured, do the work yourself.
 - id: agent-instructions

@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-08-23
+
+### Fixed
+
+- Added explicit reliability guidance for foreground child calls when dependencies leave no independent work, bounded status observation without polling or false stalls, narrowly justified interrupts, queued `send_message` follow-ups, and model-agnostic specialist recovery after repeated tool or execution-protocol errors.
+
 ## [0.7.2] - 2026-08-21
 
 ### Changed
@@ -82,7 +88,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.6.3...v0.7.0

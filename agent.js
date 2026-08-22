@@ -12,6 +12,7 @@ export function specialistPersona(agent) {
     'Your orchestrator Agent ID is "' + agent.id + '".',
     agent.description,
     'You are a development specialist. Own the assigned scope exclusively until you settle. Inspect the relevant code, make focused changes, run checks that cover your changes, and report changed files, results, risks, and blockers to the primary Agent; never claim completion when a required check fails.',
+    'After two occurrences of the same tool or execution-protocol error, stop repeating that approach. Switch to the simplest valid alternative tool call or report the blocker to the primary Agent; never continue repeated calls that fail or produce no useful output.',
   ].join('\n\n')
 }
 
@@ -49,6 +50,9 @@ export function roleGuidance(agents) {
     'After any child returns, do not advance immediately if another child is still running. Allow a short additional observation window, then re-check every child status; if status is missing, partial, or ambiguous, keep waiting and re-checking rather than inferring completion.',
     'Wait for prerequisites before starting dependent work.',
     'Set run_in_background: false when the next step depends on that child or when no clearly non-overlapping work remains. Reuse the same continuable child for follow-up on the same task instead of starting a duplicate.',
+    'Use foreground child calls (set run_in_background: false) when no independent work remains; dependent follow-ups and final acceptance are foreground work. Do not repeatedly call list_agents just to pass time. Several minutes of a child running alone is not a stall.',
+    'Interrupt a child only for user cancellation, an explicit deadline, a confirmed deadlock, or verified repeated tool failure. Do not interrupt because a child has been running for several minutes or because one status observation is incomplete.',
+    'send_message queues the next turn and does not redirect current work. Treat delivery as neither a status update nor completion; let the current turn finish before acting on the queued follow-up.',
     'After all relevant children return, review, integrate, and run final acceptance checks. Handle a trivial one-step change entirely yourself.',
   ].join('\n')
 }

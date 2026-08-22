@@ -67,6 +67,8 @@ Create a new session after changing the Agent roster or model assignments. Sessi
 
 During a non-trivial session, the primary Agent establishes acceptance criteria and assigns development scopes before editing. It treats the configured roster as execution capacity, maps every meaningful separable scope to the best-fit specialist, and starts all independent matches together up to the three-Agent limit. A suitable specialist is not kept idle while the primary performs development, but the primary does not invent work merely to use every Agent. A running specialist owns its assigned scope; the primary may coordinate other clearly disjoint scopes but waits instead of implementing the same outcome. After specialists return, the primary reviews integration boundaries and runs the final acceptance checks.
 
+Reliability behavior: when no independent work remains, the primary uses foreground child calls and does not repeatedly poll `list_agents` just to pass time. A child running alone for several minutes is not a stall. Interrupts are limited to user cancellation, an explicit deadline, a confirmed deadlock, or verified repeated tool failure. `send_message` queues the next turn and does not redirect current work. After two occurrences of the same tool or execution-protocol error, a specialist switches to the simplest valid alternative tool call or reports the blocker and avoids repeated calls that fail or produce no useful output.
+
 ### Agent fields
 
 | Field | Required | Description |
@@ -164,6 +166,8 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 修改 Agent 列表或模型分配后，请创建新的 Session。已经运行的 Session 会继续使用启动时的 Agent 配置。
 
 在非简单 Session 中，主 Agent 会先确定验收标准并分配开发范围，再进入实施。它把已配置的 Agent 视为执行容量，将每个有效且可独立交付的范围分配给最匹配的 specialist，并在最多 3 个 Agent 的限制内同时启动所有独立匹配项。存在合适 specialist 时，主 Agent 不自行承担开发；但不会为了占满 Agent 人为制造任务。运行中的 specialist 独占其任务范围；主 Agent 可以协调其他明确不重叠的范围，但必须等待而不能并行实现相同目标。specialist 返回后，主 Agent 负责检查集成边界并执行最终验收。
+
+可靠性行为：没有独立工作剩余时，主 Agent 使用前台子调用，不反复轮询 `list_agents` 来消磨时间。子 Agent 独自运行几分钟不视为卡住。只有用户取消、明确期限、确认死锁或验证过的重复工具失败才允许中断。`send_message` 只排队下一轮，不会改道当前工作。specialist 连续两次遇到相同工具或执行协议错误后，改用最简单的有效替代工具调用或报告阻塞，并避免继续发起失败或没有有效输出的重复调用。
 
 ### Agent 配置项
 
