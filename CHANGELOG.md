@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-08-26
+
+### Fixed
+
+- Permitted agent descriptions to preserve multi-line prompt text: internal line breaks are now accepted in the configured description instead of being rejected as invalid newlines.
+
 ## [0.7.3] - 2026-08-23
 
 ### Fixed
@@ -88,7 +94,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.3...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.4...HEAD
+[0.7.4]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.0...v0.7.1
