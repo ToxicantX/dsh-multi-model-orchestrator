@@ -2,10 +2,10 @@ export const AGENT_ID = /^[a-z][a-z0-9_-]{0,47}$/u
 export const MAX_AGENT_COUNT = 3
 export const DEFAULT_AGENT_DESCRIPTION = 'Implement and adjust the assigned code scope, add or update focused tests, inspect your diff, and run the checks that cover your changes before handoff. Report changed files, commands and results, risks, and blockers to the primary Agent; never claim completion when a required check fails.'
 
-function requiredString(value, label, maxLength = 512) {
+function requiredString(value, label, maxLength = 512, multiline = false) {
   if (typeof value !== 'string' || value.trim() === '') throw new Error('Missing required field: ' + label)
   const clean = value.trim()
-  if (/\r|\n|\0/u.test(clean)) throw new Error('Invalid newline in ' + label)
+  if ((multiline ? /\0/u : /[\r\n\0]/u).test(clean)) throw new Error('Invalid newline in ' + label)
   if (clean.length > maxLength) throw new Error(label + ' exceeds ' + maxLength + ' characters')
   return clean
 }
@@ -24,7 +24,7 @@ export function normalizeAgents(value, options = {}) {
     const model = requiredString(entry.model, 'agents[' + index + '].model')
     const description = entry.description === undefined
       ? DEFAULT_AGENT_DESCRIPTION
-      : requiredString(entry.description, 'agents[' + index + '].description', 2000)
+      : requiredString(entry.description, 'agents[' + index + '].description', 2000, true)
     const reasoningEffort = entry.reasoningEffort === undefined
       ? undefined
       : requiredString(entry.reasoningEffort, 'agents[' + index + '].reasoningEffort', 128)

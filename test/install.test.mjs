@@ -320,6 +320,17 @@ test('normalizeAgents permits empty only with allowEmpty', () => {
   assert.equal(normalizeAgents(tooMany, { allowEmpty: true, allowOverLimit: true }).length, 4)
 })
 
+test('normalizeAgents preserves internal line breaks in multiline descriptions', () => {
+  const multi = description => normalizeAgents([agent('multi', { description })])[0].description
+  assert.equal(multi('First line\nSecond line'), 'First line\nSecond line')
+  assert.equal(multi('First line\r\nSecond line'), 'First line\r\nSecond line')
+  assert.equal(multi('  Lead\nTrail  '), 'Lead\nTrail')
+  assert.throws(() => normalizeAgents([agent('multi', { description: 'a\0b' })]), /Invalid newline/)
+  assert.throws(() => normalizeAgents([agent('multi', { provider: 'p\np' })]), /Invalid newline.*provider/)
+  assert.throws(() => normalizeAgents([agent('multi', { description: '\n\n  \n' })]), /Missing required field/)
+  assert.throws(() => normalizeAgents([agent('multi', { description: 'x'.repeat(2001) })]), /exceeds 2000 characters/)
+})
+
 test('host exports a unique settings namespace and validates service snapshots', () => {
   assert.equal(String(ORCHESTRATOR_SETTINGS_NAMESPACE), 'multi-model-orchestrator')
   assert.equal(typeof AgentSettingsSchema, 'function')
