@@ -8,22 +8,23 @@ Configure and run a team of model-backed specialist Agents in [DeepSeek Harness]
 
 ### Overview
 
-DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can create up to 3 specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility.
+DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can configure up to 3 reusable specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility. These configured Agents are reusable specialist tools; the number of child tasks is determined by meaningful work and runtime capacity, not by the roster size.
 
 When a session uses the **Multi-model orchestrator** preset, every configured Agent becomes an independent subagent tool that the primary Agent can delegate work to.
 
-The primary Agent acts as the product owner and engineering manager rather than the default developer. For non-trivial work, it defines the outcome and acceptance criteria, decomposes non-overlapping scopes, and delegates development, investigation, testing, and review before implementation begins. Each specialist exclusively owns its delegated scope until it settles; the primary coordinates only non-overlapping work, waits on dependencies, integrates returned work, and performs final acceptance. Truly small one-step changes can stay local.
+The primary Agent acts as the product owner and engineering manager rather than the default developer. For non-trivial work, it defines the outcome and acceptance criteria, decomposes non-overlapping scopes, and delegates development, investigation, testing, and review before implementation begins. Each child exclusively owns one cohesive task and acceptance target until it settles; the primary coordinates only non-overlapping work, waits on dependencies, integrates returned work, and performs final acceptance. Truly small one-step changes can stay local.
 
 ### Features
 
-- Create and remove up to 3 specialist Agents.
+- Configure up to 3 reusable specialist Agents; reuse each tool across multiple child tasks.
 - Select models already available in DSH.
 - Give each Agent a stable ID and development scope.
 - Select an optional reasoning effort from the exact levels advertised by the Agent's model.
 - Set an optional maximum output-token limit per Agent.
 - Make the primary Agent responsible for requirements, planning, assignment, integration, and final acceptance.
-- Give specialists exclusive ownership of delegated development scopes so the primary cannot duplicate their work.
-- Map meaningful scopes to the best-fit available specialists, dispatch all independent matches together, wait on dependencies, and reuse continuable children for follow-ups without inventing work to fill capacity.
+- Give each child exclusive ownership of one cohesive task and acceptance target so the primary cannot duplicate its work.
+- Split non-trivial work by complexity into any number of meaningful, non-overlapping tasks with independent acceptance targets, while avoiding artificial or overly granular splits.
+- Create a new child for each independent task, including when multiple tasks use the same specialist; run independent tasks concurrently within runtime capacity and serialize file, ownership, or dependency overlaps.
 - Keep each running session on the Agent configuration it started with.
 
 ### Requirements
@@ -65,9 +66,9 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 
 Create a new session after changing the Agent roster or model assignments. Sessions that are already running keep their original Agent configuration.
 
-During a non-trivial session, the primary Agent establishes acceptance criteria and assigns development scopes before editing. It treats the configured roster as execution capacity, maps every meaningful separable scope to the best-fit specialist, and starts all independent matches together up to the three-Agent limit. A suitable specialist is not kept idle while the primary performs development, but the primary does not invent work merely to use every Agent. A running specialist owns its assigned scope; the primary may coordinate other clearly disjoint scopes but waits instead of implementing the same outcome. After specialists return, the primary reviews integration boundaries and runs the final acceptance checks.
+During a non-trivial session, the primary Agent establishes acceptance criteria and assigns development tasks before editing. It treats the configured Agents as reusable specialist tools, decomposes work by complexity into any number of meaningful, non-overlapping tasks with independent acceptance targets, and avoids artificial or overly granular splits. Each task gets a new child, even when it matches a specialist already used for another task. Independent tasks run concurrently within runtime capacity; tasks that overlap files, ownership, or dependencies run serially. A suitable specialist is not kept idle while the primary performs development, but the primary does not invent work merely to use every Agent. Each child owns one cohesive task and one acceptance target until it returns; the primary may coordinate other clearly disjoint tasks but waits instead of implementing the same outcome. For corrections to the same task, it reuses the continuable child. After specialists return, the primary reviews integration boundaries and runs the final acceptance checks.
 
-Reliability behavior: when no independent work remains, the primary uses foreground child calls and does not repeatedly poll `list_agents` just to pass time. A child running alone for several minutes is not a stall. Interrupts are limited to user cancellation, an explicit deadline, a confirmed deadlock, or verified repeated tool failure. `send_message` queues the next turn and does not redirect current work. After two occurrences of the same tool or execution-protocol error, a specialist switches to the simplest valid alternative tool call or reports the blocker and avoids repeated calls that fail or produce no useful output.
+Reliability behavior: when no independent work remains, the primary uses foreground child calls and does not repeatedly poll `list_agents` just to pass time. A running child that has not reported an error is treated as healthy. Elapsed time, silence, repeated or unchanged status, and another child finishing are not deadlock evidence, alone or together. Interrupts are limited to direct user cancellation, an explicit deadline that has arrived, a deadlock supported by concrete evidence, or verified repeated tool or execution failure. The primary never interrupts to request an early report, shorten a wait, regain control, begin integration, or avoid waiting, and never infers a deadlock from duration or lack of messages. `send_message` queues the next turn and does not redirect current work. After two occurrences of the same tool or execution-protocol error, a specialist switches to the simplest valid alternative tool call or reports the blocker and avoids repeated calls that fail or produce no useful output.
 
 ### Agent fields
 
@@ -108,22 +109,23 @@ pnpm dsh plugin --profile web add -w D:/path/to/dsh-multi-model-orchestrator
 
 ### 项目介绍
 
-DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent 编排功能。你可以创建最多 3 个专业 Agent，为每个 Agent 选择 DSH 中已有的模型，并设置清晰的职责。
+DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent 编排功能。你可以配置最多 3 个可复用的专业 Agent，为每个 Agent 选择 DSH 中已有的模型，并设置清晰的职责。这些 Agent 是可复用的 specialist 工具；child 任务的数量由有效工作和 runtime 容量决定，而不是由 Agent 列表数量决定。
 
 Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent 都会成为独立的子 Agent 工具，供主 Agent 按任务需要进行委派。
 
-主 Agent 的定位是产品负责人和工程项目经理，而不是默认开发者。面对非简单工作，它先明确目标与验收标准，拆分互不重叠的范围，并在实施开始前委派开发、调查、测试和审查。每个 specialist 在返回前独占其委派范围；主 Agent 只协调不重叠工作、等待依赖、集成返回结果并执行最终验收。真正的一步小改仍可直接完成。
+主 Agent 的定位是产品负责人和工程项目经理，而不是默认开发者。面对非简单工作，它先明确目标与验收标准，拆分互不重叠的范围，并在实施开始前委派开发、调查、测试和审查。每个 child 在返回前独占一个内聚任务和验收目标；主 Agent 只协调不重叠工作、等待依赖、集成返回结果并执行最终验收。真正的一步小改仍可直接完成。
 
 ### 功能特性
 
-- 创建和删除最多 3 个专业 Agent。
+- 配置最多 3 个可复用的专业 Agent；每个工具可以服务多个 child 任务。
 - 直接选择 DSH 中已有的模型。
 - 为每个 Agent 设置固定 ID 和开发职责。
 - 从对应模型实际提供的等级中选择可选推理等级。
 - 为每个 Agent 设置可选的最大输出 Token。
 - 由主 Agent 负责需求、计划、分配、集成和最终验收。
-- specialist 独占已委派的开发范围，避免主 Agent 重复实现。
-- 将有效范围分配给最匹配的可用 specialist，同时启动所有独立匹配项、等待依赖并复用可继续子 Agent，且不为占满容量人为制造任务。
+- 每个 child 独占一个内聚任务和验收目标，避免主 Agent 重复实现。
+- 按复杂度将非简单工作拆分为任意数量有意义、互不重叠且可独立验收的任务，避免人为制造或过度微拆。
+- 每个独立任务创建新的 child，即使多个任务匹配同一 specialist；独立任务可在 runtime 容量内并发，文件、所有权或依赖交叉的任务串行。
 - 运行中的 Session 保持启动时的 Agent 配置。
 
 ### 环境要求
@@ -165,9 +167,9 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 
 修改 Agent 列表或模型分配后，请创建新的 Session。已经运行的 Session 会继续使用启动时的 Agent 配置。
 
-在非简单 Session 中，主 Agent 会先确定验收标准并分配开发范围，再进入实施。它把已配置的 Agent 视为执行容量，将每个有效且可独立交付的范围分配给最匹配的 specialist，并在最多 3 个 Agent 的限制内同时启动所有独立匹配项。存在合适 specialist 时，主 Agent 不自行承担开发；但不会为了占满 Agent 人为制造任务。运行中的 specialist 独占其任务范围；主 Agent 可以协调其他明确不重叠的范围，但必须等待而不能并行实现相同目标。specialist 返回后，主 Agent 负责检查集成边界并执行最终验收。
+在非简单 Session 中，主 Agent 会先确定验收标准并分配开发任务，再进入实施。它把已配置的 Agent 视为可复用的 specialist 工具，按复杂度将工作拆分为任意数量有意义、互不重叠且可独立验收的任务，并避免人为制造或过度微拆。每个任务都创建新的 child，即使它匹配已经用于其他任务的 specialist。独立任务可在 runtime 容量内并发；文件、所有权或依赖交叉的任务必须串行。存在合适 specialist 时，主 Agent 不自行承担开发，但不会为了占满 Agent 人为制造任务。每个 child 在返回前独占一个内聚任务和一个验收目标；主 Agent 可以协调其他明确不重叠的任务，但必须等待而不能并行实现相同目标。同一任务需要修正时，复用原 continuable child。specialist 返回后，主 Agent 负责检查集成边界并执行最终验收。
 
-可靠性行为：没有独立工作剩余时，主 Agent 使用前台子调用，不反复轮询 `list_agents` 来消磨时间。子 Agent 独自运行几分钟不视为卡住。只有用户取消、明确期限、确认死锁或验证过的重复工具失败才允许中断。`send_message` 只排队下一轮，不会改道当前工作。specialist 连续两次遇到相同工具或执行协议错误后，改用最简单的有效替代工具调用或报告阻塞，并避免继续发起失败或没有有效输出的重复调用。
+可靠性行为：没有独立工作剩余时，主 Agent 使用前台子调用，不反复轮询 `list_agents` 来消磨时间。仍在运行且没有报告错误的子 Agent 视为健康；耗时、静默、重复或不变的状态，以及其他子 Agent 已完成，无论单独还是组合都不是死锁证据。只有用户明确取消、明确期限已经到达、有具体证据支持的真实死锁，或验证过的重复工具或执行失败才允许中断。主 Agent 绝不能为了催要提前报告、缩短等待、重新取得控制权、开始集成或避免等待而中断，也不能仅根据运行时长或没有新消息推断死锁。`send_message` 只排队下一轮，不会改道当前工作。specialist 连续两次遇到相同工具或执行协议错误后，改用最简单的有效替代工具调用或报告阻塞，并避免继续发起失败或没有有效输出的重复调用。
 
 ### Agent 配置项
 

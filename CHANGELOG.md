@@ -4,6 +4,14 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-08-31
+
+### Fixed
+
+- Permitted agent descriptions to preserve multi-line prompt text: internal line breaks are now accepted in the configured description instead of being rejected as invalid newlines.
+- Prevented the primary Agent from treating elapsed time, silence, unchanged child status, or another child completing as deadlock evidence, and explicitly prohibited interrupts used to solicit early reports or avoid waiting.
+- Clarified that the three configured specialist tools are reusable across any number of meaningful child tasks, with runtime capacity and overlapping files, ownership, or dependencies governing concurrency.
+
 ## [0.7.4] - 2026-08-26
 
 ### Fixed
@@ -94,7 +102,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.4...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.5...HEAD
+[0.7.5]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.1...v0.7.2
