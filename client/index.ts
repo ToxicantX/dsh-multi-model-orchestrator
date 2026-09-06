@@ -1,5 +1,4 @@
 import { SettingsOrchestratorSection } from './SettingsOrchestratorSection.tsx'
-import { hideLegacyPresetFromCatalog, type AgentPresetsApi } from './presetCatalog.ts'
 import type { ClientContext, Translation } from './state.ts'
 
 const NS = 'settings.orchestrator'
@@ -68,7 +67,9 @@ interface ClientPluginContext {
     register(namespace: string, locales: Record<string, Record<string, string>>): unknown
     bind(namespace: string): Translation
   }
-  get(name: 'connection'): { api: ClientContext['api'] & { agentPresets: AgentPresetsApi } }
+  remote: {
+    session: ClientContext['models']
+  }
   slots: {
     inject(name: string, factory: () => unknown): unknown
     register(options: {
@@ -81,19 +82,17 @@ interface ClientPluginContext {
   }
 }
 
-export const inject = ['slots', 'locale', 'connection']
+export const inject = ['slots', 'locale', 'remote', 'remote.session']
 
 export function apply(ctx: ClientPluginContext) {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'multi-model-orchestrator: locale')
-  const connection = ctx.get('connection')
-  ctx.effect(() => hideLegacyPresetFromCatalog(connection.api.agentPresets), 'multi-model-orchestrator: hide legacy preset')
   const t = ctx.locale.bind(NS)
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
     id: 'orchestrator',
     order: 15,
     label: () => t('nav'),
-    inject: () => ({ api: connection.api, t }),
+    inject: () => ({ models: ctx.remote.session, t }),
   }, SettingsOrchestratorSection))
 }
 

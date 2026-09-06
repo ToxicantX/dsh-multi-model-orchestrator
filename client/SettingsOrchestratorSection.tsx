@@ -53,7 +53,7 @@ function modelValue(agent: Pick<AgentInput, 'provider' | 'model'>) {
   return JSON.stringify([agent.provider, agent.model])
 }
 
-export function SettingsOrchestratorSection({ api, t }: ClientContext) {
+export function SettingsOrchestratorSection({ models, t }: ClientContext) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'saving' | 'error'>('loading')
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -85,10 +85,10 @@ export function SettingsOrchestratorSection({ api, t }: ClientContext) {
     try {
       const [settingsValue, modelsResponse] = await Promise.all([
         settingsRequest(undefined, controller.signal),
-        api.llm.models({}),
+        models.modelCatalog(),
       ])
-      if (!modelsResponse.result.ok) throw new Error(modelsResponse.result.error.message)
-      const modelGroups = modelsResponse.result.value.groups
+      if (!modelsResponse.ok) throw new Error(modelsResponse.error.message)
+      const modelGroups = modelsResponse.value.groups
       const stored = Array.isArray(settingsValue.agents) ? settingsValue.agents : []
       applyIfCurrent(id, () => {
         setAgents(stored.map(hydrateAgent))

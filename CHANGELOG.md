@@ -4,6 +4,14 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.6] - 2026-09-06
+
+### Changed
+
+- Raised the DSH compatibility baseline to 0.1.2-rc.1, migrated model discovery to the typed Remote catalog, and moved legacy-preset filtering to the Host roster export.
+- Applied each specialist's reasoning effort through the native subagent `agentOptions` contract and placed orchestration guidance at DSH's centralized `TEAM_POLICY` prompt order.
+- Aligned the managed preset with the 0.1.2 standard preset's goal command and protected public WebFetch defaults.
+
 ## [0.7.5] - 2026-08-31
 
 ### Fixed
@@ -102,7 +110,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.5...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.6...HEAD
+[0.7.6]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.3...v0.7.4
 [0.7.3]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.2...v0.7.3

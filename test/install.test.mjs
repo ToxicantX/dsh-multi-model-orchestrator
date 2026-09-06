@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import test from 'node:test'
 import packageJson from '../package.json' with { type: 'json' }
-import hostPlugin, { Config as HostConfig, ORCHESTRATOR_SETTINGS_ENDPOINT, ORCHESTRATOR_SETTINGS_NAMESPACE, AgentSettingsSchema, SettingsSchema, MultiModelOrchestratorSettings, apply as applyHost, inject as hostInject, settingsRoute } from '../host.js'
+import hostPlugin, { Config as HostConfig, ORCHESTRATOR_PRESET_NAME, ORCHESTRATOR_SETTINGS_ENDPOINT, ORCHESTRATOR_SETTINGS_NAMESPACE, AgentSettingsSchema, SettingsSchema, MultiModelOrchestratorSettings, apply as applyHost, hideLegacyPresetFromCatalog, inject as hostInject, settingsRoute } from '../host.js'
 import { DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT, normalizeAgents } from '../src/config.js'
 import { install, parseArgs } from '../src/install.mjs'
 import { LEGACY_PRESET_ID, PRESET_MARKER, provisionLegacyPreset, provisionPreset } from '../src/preset.js'
@@ -24,6 +24,7 @@ function settingsContext(initial = { agents: [] }) {
     reflect: { provide() {} },
     provide(name, value) { provided.set(name, value) },
     webServer: { register(route) { routes.push(route); return () => {} } },
+    agentPresets: { async remoteExportList() { return { presets: [], authorable: true } } },
     settings: { register(ns, schema, options) {
       registrations.push({ ns, schema, options })
       return { get: () => current, watch: callback => { watched = callback; return () => {} }, replace: async next => { const previous = current; current = structuredClone(next); await watched?.(current, previous) } }
@@ -116,6 +117,9 @@ test('installer copies exactly the fixed orchestrator preset and no agent data r
     assert.equal(persona(primarySource), persona(legacySource))
     assert.doesNotMatch(output, /file ownership|Do not delegate these responsibilities|fixed delegation ratio/u)
     assert.match(await readFile(join(target, 'preset.yml'), 'utf8'), /multi-model orchestrator/iu)
+    const installedPreset = await readFile(join(target, 'agent.cordis.yml'), 'utf8')
+    assert.match(installedPreset, /name: '@deepseek-ai\/dsh-command-goal'/u)
+    assert.match(installedPreset, /fetch: true/u)
     assert.deepEqual((await readdir(target)).sort(), [PRESET_MARKER, 'agent.cordis.yml', 'preset.yml'].sort())
     assert.equal(result.compatibility.target, join(root, 'presets', LEGACY_PRESET_ID))
     assert.equal(result.compatibility.skipped, false)
@@ -348,6 +352,7 @@ test('host exports a unique settings namespace and validates service snapshots',
   assert.equal(typeof SettingsSchema, 'function')
   assert.equal(hostPlugin, applyHost)
   assert.deepEqual(hostPlugin.inject, hostInject)
+  assert.deepEqual(hostInject, ['settings', 'webServer', 'agentPresets'])
   assert.equal(hostPlugin.Config, HostConfig)
   const fake = settingsContext({ agents: [agent('solo')] })
   const service = new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath: undefined })
@@ -377,6 +382,26 @@ test('host endpoint replaces only validated Agent settings', async () => {
   assert.deepEqual(await service.replaceAgents([agent('after')]), [agent('after')])
   assert.equal(settingsRoute(service).path, ORCHESTRATOR_SETTINGS_ENDPOINT)
   await assert.rejects(() => service.replaceAgents([{ id: 'bad id', provider: 'p', model: 'm' }]), /Invalid agent id/)
+})
+
+test('host catalog hides only the managed legacy alias and restores the service', async () => {
+  const response = {
+    presets: [
+      { id: 'standard' },
+      { id: 'multi-model-orchestrator', name: ORCHESTRATOR_PRESET_NAME },
+      { id: LEGACY_PRESET_ID, name: ORCHESTRATOR_PRESET_NAME },
+      { id: LEGACY_PRESET_ID, name: 'User preset' },
+    ],
+    authorable: true,
+  }
+  const originalList = async () => response
+  const agentPresets = { remoteExportList: originalList }
+  const restore = hideLegacyPresetFromCatalog(agentPresets)
+  const filtered = await agentPresets.remoteExportList()
+  assert.deepEqual(filtered.presets.map(preset => preset.name ?? preset.id), ['standard', ORCHESTRATOR_PRESET_NAME, 'User preset'])
+  assert.equal(response.presets.length, 4)
+  restore()
+  assert.equal(agentPresets.remoteExportList, originalList)
 })
 
 test('host settings route enforces origin, method, media type, shape, size, and normalization', async () => {
@@ -444,15 +469,16 @@ test('host onChange touches an existing preset path', async () => {
 test('package declares bundle and client integration exports', () => {
   assert.deepEqual(packageJson.dsh.bundle, { patch: './cordis.patch.yml' })
   assert.deepEqual(packageJson.dsh.client.inject, [
-    '@deepseek-ai/dsh-client-runtime', '@deepseek-ai/dsh-client-ui-settings', '@deepseek-ai/dsh-client-locale', '@deepseek-ai/dsh-api-remotes',
+    '@deepseek-ai/dsh-client-ui-settings', '@deepseek-ai/dsh-client-locale', '@deepseek-ai/dsh-api-remotes',
   ])
   assert.equal(packageJson.exports['./host'], './host.js')
   assert.equal(packageJson.exports['./agent'], './agent.js')
   assert.equal(packageJson.exports['./client'], './lib/client.js')
-  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-system-prompt'], '^0.1.1-rc.1')
-  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-tool-subagent'], '^0.1.1-rc.1')
-  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh-system-prompt'], '0.1.1-rc.1')
-  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh-tool-subagent'], '0.1.1-rc.1')
+  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-system-prompt'], '^0.1.2-rc.1')
+  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-tool-subagent'], '^0.1.2-rc.1')
+  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh-system-prompt'], '0.1.2-rc.1')
+  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh-tool-subagent'], '0.1.2-rc.1')
+  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh'], '0.1.2-rc.1')
   assert.ok(packageJson.files.includes('src/preset.js'))
   assert.ok(packageJson.files.includes('preset-legacy/'))
 })

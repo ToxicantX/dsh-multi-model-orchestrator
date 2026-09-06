@@ -2,12 +2,13 @@ import { utimesSync } from 'node:fs'
 import { basename, dirname } from 'node:path'
 import z from '@deepseek-ai/schemastery'
 import { MAX_AGENT_COUNT, normalizeAgents } from './src/config.js'
-import { DEFAULT_PRESET_ID, provisionLegacyPreset, provisionPreset } from './src/preset.js'
+import { DEFAULT_PRESET_ID, LEGACY_PRESET_ID, provisionLegacyPreset, provisionPreset } from './src/preset.js'
 
 export const name = 'multi-model-orchestrator-settings'
-export const inject = ['settings', 'webServer']
+export const inject = ['settings', 'webServer', 'agentPresets']
 export const ORCHESTRATOR_SETTINGS_NAMESPACE = 'multi-model-orchestrator'
 export const ORCHESTRATOR_SETTINGS_ENDPOINT = '/plugins/dsh-multi-model-orchestrator/settings'
+export const ORCHESTRATOR_PRESET_NAME = 'Multi-model orchestrator'
 
 export const AgentSettingsSchema = z.object({
   id: z.string().required(),
@@ -111,12 +112,30 @@ export function settingsRoute(service) {
   }
 }
 
+export function hideLegacyPresetFromCatalog(agentPresets) {
+  const originalList = agentPresets.remoteExportList
+  const filteredList = async function () {
+    const response = await originalList.call(this)
+    return {
+      ...response,
+      presets: response.presets.filter(preset => !(
+        preset.id === LEGACY_PRESET_ID && preset.name === ORCHESTRATOR_PRESET_NAME
+      )),
+    }
+  }
+  agentPresets.remoteExportList = filteredList
+  return () => {
+    if (agentPresets.remoteExportList === filteredList) agentPresets.remoteExportList = originalList
+  }
+}
+
 export function apply(ctx, config) {
   if (config.presetPath !== undefined) {
     const target = dirname(config.presetPath)
     provisionPreset({ target })
     if (basename(target) === DEFAULT_PRESET_ID) provisionLegacyPreset({ primaryTarget: target })
   }
+  ctx.effect(() => hideLegacyPresetFromCatalog(ctx.agentPresets))
   const service = new MultiModelOrchestratorSettings(ctx, config)
   ctx.provide('multiModelOrchestrator', service)
   ctx.effect(() => ctx.webServer.register(settingsRoute(service)))

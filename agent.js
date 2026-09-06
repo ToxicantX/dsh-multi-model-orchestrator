@@ -5,8 +5,6 @@ export const name = 'multi-model-orchestrator-agent'
 export const inject = ['systemPrompt', 'multiModelOrchestrator']
 export const Config = z.object({})
 
-const SPECIALIST_ID = /^Your orchestrator Agent ID is "([a-z][a-z0-9_-]{0,47})"\.$/u
-
 export function specialistPersona(agent) {
   return [
     'Your orchestrator Agent ID is "' + agent.id + '".',
@@ -15,25 +13,6 @@ export function specialistPersona(agent) {
     'Own exactly one cohesive task, one acceptance target, and its directly supporting verification. Do not absorb a second independent task or any scope that overlaps another child; if the assignment contains multiple independent or overlapping tasks, report the scope conflict to the primary Agent before editing.',
     'After two occurrences of the same tool or execution-protocol error, stop repeating that approach. Switch to the simplest valid alternative tool call or report the blocker to the primary Agent; never continue repeated calls that fail or produce no useful output.',
   ].join('\n\n')
-}
-
-function currentSpecialistId(agent) {
-  const session = agent?.session
-  if (session === undefined) return undefined
-  const events = session.events.slice(session.header.seedLength ?? 0)
-  const descriptor = events.find(event => event.type === 'subagent/descriptor')?.data
-  if (descriptor?.mode !== 'continuable' || typeof descriptor.persona !== 'string') return undefined
-  return descriptor.persona.split('\n', 1)[0]?.match(SPECIALIST_ID)?.[1]
-}
-
-function installReasoningEffort(ctx, agents) {
-  const efforts = new Map(agents.flatMap(agent => agent.reasoningEffort === undefined ? [] : [[agent.id, agent.reasoningEffort]]))
-  if (efforts.size === 0) return
-  ctx.on('agent/request', async ({ agent }, next) => {
-    const resolved = await next()
-    const reasoningEffort = efforts.get(currentSpecialistId(agent))
-    return reasoningEffort === undefined ? resolved : { ...resolved, reasoningEffort }
-  })
 }
 
 export function roleGuidance(agents) {
@@ -61,10 +40,9 @@ export function roleGuidance(agents) {
 
 export async function apply(ctx) {
   const snapshot = ctx.multiModelOrchestrator.currentAgents()
-  installReasoningEffort(ctx, snapshot)
   ctx.effect(() => ctx.systemPrompt.section({
     name: 'multi-model-orchestrator:roles',
-    order: 116.6,
+    order: ctx.systemPrompt.getSectionOrder('TEAM_POLICY'),
     text: roleGuidance(snapshot),
   }), 'multi-model-orchestrator.roles')
 
@@ -75,6 +53,7 @@ export async function apply(ctx) {
     agentOptions: {
       provider: agent.provider,
       model: agent.model,
+      ...(agent.reasoningEffort === undefined ? {} : { reasoningEffort: agent.reasoningEffort }),
       ...(agent.maxTokens === undefined ? {} : { maxTokens: agent.maxTokens }),
     },
     persona: specialistPersona(agent),

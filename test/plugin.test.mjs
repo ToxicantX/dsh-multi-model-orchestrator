@@ -7,21 +7,24 @@ const agents = [
   { id: 'reviewer', provider: 'beta', model: 'model-b', description: 'Review independently.', maxTokens: 4096 },
 ]
 
-function agentContext(snapshot = agents, currentAgent) {
+function agentContext(snapshot = agents) {
   const mounted = []
   const sections = []
   const effects = []
-  const listeners = []
+  const sectionOrders = []
   return {
-    mounted, sections, effects, listeners,
+    mounted, sections, effects, sectionOrders,
     inject,
-    agent: currentAgent,
     multiModelOrchestrator: { currentAgents: () => snapshot.map(agent => ({ ...agent })) },
     effect(factory, label) {
       const dispose = factory()
       effects.push({ dispose, label })
     },
     systemPrompt: {
+      getSectionOrder(name) {
+        sectionOrders.push(name)
+        return 600
+      },
       section(section) {
         sections.push(section)
         return () => sections.splice(sections.indexOf(section), 1)
@@ -30,10 +33,6 @@ function agentContext(snapshot = agents, currentAgent) {
     plugin(plugin, config) {
       mounted.push({ plugin, config })
       return { await: () => Promise.resolve() }
-    },
-    on(event, listener) {
-      listeners.push({ event, listener })
-      return () => listeners.splice(listeners.findIndex(entry => entry.listener === listener), 1)
     },
   }
 }
@@ -53,6 +52,7 @@ test('reads one service snapshot and mounts one ToolSubagent per configured agen
   assert.equal(ctx.mounted.length, 2)
   assert.equal(ctx.mounted[0].plugin.name, 'tool-subagent')
   assert.deepEqual(ctx.mounted.map(entry => entry.config.toolName), ['subagent_architect', 'subagent_reviewer'])
+  assert.deepEqual(ctx.mounted[0].config.agentOptions, { provider: 'alpha', model: 'model-a', reasoningEffort: 'high' })
   assert.deepEqual(ctx.mounted[1].config.agentOptions, { provider: 'beta', model: 'model-b', maxTokens: 4096 })
   assert.equal(ctx.mounted[0].config.provider, 'spawn')
   assert.equal(ctx.mounted[0].config.backgroundMode, 'continuable')
@@ -72,79 +72,19 @@ test('reads one service snapshot and mounts one ToolSubagent per configured agen
   assert.match(ctx.mounted[0].config.persona, /never continue repeated calls that fail or produce no useful output/)
   assert.ok(ctx.mounted[0].config.persona.indexOf('Own architecture.') < ctx.mounted[0].config.persona.indexOf('You are a development specialist'))
   assert.doesNotMatch(ctx.mounted[0].config.persona, /file ownership|Do not delegate/u)
-  assert.equal(ctx.mounted[0].config.agentOptions.reasoningEffort, undefined)
   assert.match(ctx.sections[0].text, /subagent_architect: Own architecture/)
-  assert.equal(ctx.sections[0].order, 116.6)
+  assert.deepEqual(ctx.sectionOrders, ['TEAM_POLICY'])
+  assert.equal(ctx.sections[0].order, 600)
   assert.equal(ctx.effects[0].label, 'multi-model-orchestrator.roles')
   ctx.effects[0].dispose()
   assert.equal(ctx.sections.length, 0)
 })
 
-test('binds reasoning effort at request time when apply has no current Agent', async () => {
-  const ctx = agentContext(agents)
-  await apply(ctx)
-  assert.equal(ctx.listeners.length, 1)
-  assert.equal(ctx.listeners[0].event, 'agent/request')
-  const requestAgent = {
-    session: {
-      header: { seedLength: 1 },
-      events: [
-        { type: 'subagent/descriptor', data: { mode: 'continuable', persona: specialistPersona(agents[1]) } },
-        { type: 'subagent/descriptor', data: { mode: 'continuable', persona: specialistPersona(agents[0]) } },
-      ],
-    },
-  }
-  const downstream = { provider: 'alpha', model: 'model-a', reasoningEffort: 'low', temperature: 0.2 }
-  let calls = 0
-  const request = await ctx.listeners[0].listener({ agent: requestAgent }, async () => {
-    calls += 1
-    return downstream
-  })
-  assert.equal(calls, 1)
-  assert.notEqual(request, downstream)
-  assert.deepEqual(request, { provider: 'alpha', model: 'model-a', reasoningEffort: 'high', temperature: 0.2 })
-  assert.deepEqual(downstream, { provider: 'alpha', model: 'model-a', reasoningEffort: 'low', temperature: 0.2 })
-})
-
-test('leaves non-matching sessions unchanged and ignores inherited descriptors', async () => {
-  const ctx = agentContext(agents)
-  await apply(ctx)
-  const downstream = { provider: 'beta', model: 'model-b' }
-  const sessions = [
-    { header: {}, events: [] },
-    { header: { seedLength: 1 }, events: [
-      { type: 'subagent/descriptor', data: { mode: 'continuable', persona: specialistPersona(agents[0]) } },
-      { type: 'user/message', data: {} },
-    ] },
-    { header: {}, events: [
-      { type: 'subagent/descriptor', data: { mode: 'continuable', persona: agents[0].description } },
-    ] },
-    { header: {}, events: [
-      { type: 'subagent/descriptor', data: { mode: 'one-shot', persona: specialistPersona(agents[0]) } },
-    ] },
-    { header: {}, events: [
-      { type: 'subagent/descriptor', data: { mode: 'continuable', persona: 'Your orchestrator Agent ID is "unknown".' } },
-    ] },
-    { header: {}, events: [
-      { type: 'subagent/descriptor', data: { mode: 'continuable', persona: specialistPersona(agents[1]) } },
-    ] },
-  ]
-  for (const session of sessions) {
-    let calls = 0
-    const request = await ctx.listeners[0].listener({ agent: { session } }, async () => {
-      calls += 1
-      return downstream
-    })
-    assert.equal(calls, 1)
-    assert.equal(request, downstream)
-  }
-})
-
-test('does not register request middleware when no specialist selects an effort', async () => {
+test('omits optional child request fields when they are not configured', async () => {
   const ctx = agentContext([agents[1]])
   await apply(ctx)
   assert.equal(ctx.mounted.length, 1)
-  assert.equal(ctx.listeners.length, 0)
+  assert.deepEqual(ctx.mounted[0].config.agentOptions, { provider: 'beta', model: 'model-b', maxTokens: 4096 })
 })
 
 test('empty service snapshot mounts no children and explains configuration state', async () => {

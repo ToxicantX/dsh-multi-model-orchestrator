@@ -1,6 +1,6 @@
 {
   "name": "dsh-multi-model-orchestrator",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "Cordis agent plugin for configurable multi-model subagent orchestration in DeepSeek Harness",
   "type": "module",
   "license": "MIT",
@@ -61,10 +61,10 @@
     "LICENSE"
   ],
   "peerDependencies": {
-    "@deepseek-ai/dsh-system-prompt": "^0.1.1-rc.1",
-    "react": "^18.2.0",
-    "@deepseek-ai/dsh-tool-subagent": "^0.1.1-rc.1",
-    "@deepseek-ai/schemastery": "^3.18.1"
+    "@deepseek-ai/dsh-system-prompt": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-tool-subagent": "^0.1.2-rc.1",
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "react": "^18.2.0"
   },
   "dsh": {
     "bundle": {
@@ -72,7 +72,6 @@
     },
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-runtime",
         "@deepseek-ai/dsh-client-ui-settings",
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-api-remotes"
@@ -81,11 +80,18 @@
     }
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-system-prompt": "0.1.1-rc.1",
-    "@deepseek-ai/dsh-tool-subagent": "0.1.1-rc.1",
+    "@deepseek-ai/dsh": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-attachment": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-code-runtime": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-jobs": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-session-persistence": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-settings": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-system-prompt": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-tool-subagent": "0.1.2-rc.1",
     "@types/node": "^22.10.0",
     "@types/react": "~18.3.1",
     "react": "^18.2.0",
+    "react-dom": "18.3.1",
     "tsdown": "^0.15.7",
     "typescript": "^5.9.2"
   },

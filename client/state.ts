@@ -46,15 +46,15 @@ export type AgentDraft = AgentInput & { renderKey: string }
 export type Translation = (key: string) => string
 
 type ModelsResult =
-  | { result: { ok: true; value: { groups: ModelGroup[] } } }
-  | { result: { ok: false; error: { message: string } } }
+  | { ok: true; value: { groups: ModelGroup[] } }
+  | { ok: false; error: { message: string } }
 
 export interface ModelsApi {
-  models(input: Record<string, never>): Promise<ModelsResult>
+  modelCatalog(): Promise<ModelsResult>
 }
 
 export interface ClientContext {
-  api: { llm: ModelsApi }
+  models: ModelsApi
   t: Translation
 }
 

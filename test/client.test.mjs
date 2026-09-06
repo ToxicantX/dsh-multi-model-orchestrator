@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import { hideLegacyPresetFromCatalog, LEGACY_PRESET_ID, ORCHESTRATOR_PRESET_NAME } from '../client/presetCatalog.ts'
 import { catalogOptions, cleanAgents, createAgentDraft, validateAgents, withRenderKey } from '../client/state.ts'
 import { DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT } from '../src/config.js'
 
@@ -75,47 +74,6 @@ test('explains the active limit for an oversized legacy roster', async () => {
   assert.match(client, /当前仅启用前 3 个；请删除多余 Agent 后保存。/u)
 })
 
-test('hides the legacy preset from client catalog responses and restores the API', async () => {
-  const response = {
-    result: {
-      ok: true,
-      value: {
-        presets: [
-          { id: 'standard' },
-          { id: 'multi-model-orchestrator', name: ORCHESTRATOR_PRESET_NAME },
-          { id: LEGACY_PRESET_ID, name: ORCHESTRATOR_PRESET_NAME, description: 'Historical description that differs by version' },
-        ],
-        authorable: true,
-      },
-    },
-  }
-  const originalList = async () => response
-  const api = { list: originalList }
-  const restore = hideLegacyPresetFromCatalog(api)
-  const filtered = await api.list({})
-  assert.deepEqual(filtered.result.value.presets.map(preset => preset.id), ['standard', 'multi-model-orchestrator'])
-  assert.deepEqual(response.result.value.presets.map(preset => preset.id), ['standard', 'multi-model-orchestrator', LEGACY_PRESET_ID])
-  assert.notEqual(filtered, response)
-  restore()
-  assert.equal(api.list, originalList)
-  assert.equal(await api.list({}), response)
-
-  const userPresetResponse = { result: { ok: true, value: { presets: [{ id: LEGACY_PRESET_ID, name: 'User preset' }] } } }
-  const userApi = { async list() { return userPresetResponse } }
-  hideLegacyPresetFromCatalog(userApi)
-  assert.deepEqual((await userApi.list({})).result.value.presets, userPresetResponse.result.value.presets)
-
-  const unnamedPresetResponse = { result: { ok: true, value: { presets: [{ id: LEGACY_PRESET_ID }] } } }
-  const unnamedApi = { async list() { return unnamedPresetResponse } }
-  hideLegacyPresetFromCatalog(unnamedApi)
-  assert.deepEqual((await unnamedApi.list({})).result.value.presets, unnamedPresetResponse.result.value.presets)
-
-  const failed = { result: { ok: false, error: { message: 'unavailable' } } }
-  const failedApi = { async list() { return failed } }
-  hideLegacyPresetFromCatalog(failedApi)
-  assert.equal(await failedApi.list({}), failed)
-})
-
 test('settings payload strips render keys and credential-like fields', async () => {
   const agents = cleanAgents([{
     id: ' a ',
@@ -133,7 +91,8 @@ test('settings payload strips render keys and credential-like fields', async () 
   assert.doesNotMatch(bundle, /discoverModels|credentials[.]|apiKeyEnv|baseURL/)
   assert.match(bundle, /\/plugins\/dsh-multi-model-orchestrator\/settings/)
   assert.doesNotMatch(bundle, /settings[.](?:replace|describe)/)
-  assert.match(bundle, /llm[.]models/)
-  assert.match(bundle, /connection[.]api[.]agentPresets/)
+  assert.match(bundle, /models[.]modelCatalog/)
+  assert.doesNotMatch(bundle, /remote[.]agentPresets/)
+  assert.doesNotMatch(bundle, /connection[.]api|llm[.]models/)
   assert.match(bundle, /CanvasText/)
 })
