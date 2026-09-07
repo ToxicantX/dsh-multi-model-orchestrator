@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.7] - 2026-09-07
+
+### Fixed
+
+- Updated the managed and legacy Agent presets to use DSH 0.1.3's `ptc` tool presentation mode instead of the removed `code` value.
+
 ## [0.7.6] - 2026-09-06
 
 ### Changed
@@ -110,7 +116,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.6...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.7...HEAD
+[0.7.7]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.4...v0.7.5
 [0.7.4]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.3...v0.7.4

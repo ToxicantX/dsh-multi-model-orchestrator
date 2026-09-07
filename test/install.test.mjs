@@ -120,6 +120,8 @@ test('installer copies exactly the fixed orchestrator preset and no agent data r
     const installedPreset = await readFile(join(target, 'agent.cordis.yml'), 'utf8')
     assert.match(installedPreset, /name: '@deepseek-ai\/dsh-command-goal'/u)
     assert.match(installedPreset, /fetch: true/u)
+    assert.match(installedPreset, /name: '@deepseek-ai\/dsh-agent-tool-presentation'[\s\S]*?mode: ptc/u)
+    assert.doesNotMatch(installedPreset, /name: '@deepseek-ai\/dsh-agent-tool-presentation'[\s\S]*?mode: code/u)
     assert.deepEqual((await readdir(target)).sort(), [PRESET_MARKER, 'agent.cordis.yml', 'preset.yml'].sort())
     assert.equal(result.compatibility.target, join(root, 'presets', LEGACY_PRESET_ID))
     assert.equal(result.compatibility.skipped, false)
