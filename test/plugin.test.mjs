@@ -3,7 +3,7 @@ import test from 'node:test'
 import agentPlugin, { Config, apply, inject, name, roleGuidance, specialistPersona } from '../agent.js'
 
 const agents = [
-  { id: 'architect', provider: 'alpha', model: 'model-a', description: 'Own architecture.', reasoningEffort: 'high' },
+  { id: 'architect', provider: 'alpha', model: 'model-a', description: 'Own architecture.', persona: 'Design boundaries and tradeoffs before editing.', reasoningEffort: 'high' },
   { id: 'reviewer', provider: 'beta', model: 'model-b', description: 'Review independently.', maxTokens: 4096 },
 ]
 
@@ -59,6 +59,8 @@ test('reads one service snapshot and mounts one ToolSubagent per configured agen
   assert.equal(ctx.mounted[0].config.maxDepth, 1)
   assert.equal(ctx.mounted[0].config.persona, specialistPersona(agents[0]))
   assert.match(ctx.mounted[0].config.persona, /^Your orchestrator Agent ID is "architect"\./u)
+  assert.match(ctx.mounted[0].config.persona, /Design boundaries and tradeoffs before editing/u)
+  assert.doesNotMatch(ctx.mounted[0].config.persona, /Own architecture\.[\s\S]*Design boundaries/u)
   assert.match(ctx.mounted[0].config.persona, /You are a development specialist/)
   assert.match(ctx.mounted[0].config.persona, /Own the assigned scope exclusively until you settle/)
   assert.match(ctx.mounted[0].config.persona, /run checks that cover your changes/)

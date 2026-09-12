@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { catalogOptions, cleanAgents, createAgentDraft, validateAgents, withRenderKey } from '../client/state.ts'
-import { DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT } from '../src/config.js'
+import { DEFAULT_AGENT_DESCRIPTION, DEFAULT_AGENT_PERSONA, MAX_AGENT_COUNT } from '../src/config.js'
 
 const input = (id, overrides = {}) => ({ id, provider: 'p', model: 'm', description: '', ...overrides })
 
@@ -14,6 +14,7 @@ test('creates stable Agent draft keys with the shared default responsibility', (
     provider: '',
     model: '',
     description: DEFAULT_AGENT_DESCRIPTION,
+    persona: DEFAULT_AGENT_PERSONA,
     reasoningEffort: undefined,
     maxTokens: undefined,
     renderKey: undefined,
@@ -23,6 +24,7 @@ test('creates stable Agent draft keys with the shared default responsibility', (
   assert.notEqual(withRenderKey(input('loaded')).renderKey, first.renderKey)
   assert.match(DEFAULT_AGENT_DESCRIPTION, /inspect your diff/)
   assert.match(DEFAULT_AGENT_DESCRIPTION, /never claim completion when a required check fails/)
+  assert.match(DEFAULT_AGENT_PERSONA, /inspect relevant code before editing/)
 })
 
 test('flattens model identifiers and detached reasoning metadata', () => {
@@ -95,4 +97,21 @@ test('settings payload strips render keys and credential-like fields', async () 
   assert.doesNotMatch(bundle, /remote[.]agentPresets/)
   assert.doesNotMatch(bundle, /connection[.]api|llm[.]models/)
   assert.match(bundle, /CanvasText/)
+})
+
+test('settings payload preserves the independent child Agent persona', () => {
+  const agents = cleanAgents([{
+    id: 'reviewer',
+    provider: 'route',
+    model: 'model',
+    description: 'Route review work.',
+    persona: 'Inspect security and regression risks before reporting.',
+  }])
+  assert.deepEqual(agents, [{
+    id: 'reviewer',
+    provider: 'route',
+    model: 'model',
+    description: 'Route review work.',
+    persona: 'Inspect security and regression risks before reporting.',
+  }])
 })

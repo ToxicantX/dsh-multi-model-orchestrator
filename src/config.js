@@ -1,6 +1,7 @@
 export const AGENT_ID = /^[a-z][a-z0-9_-]{0,47}$/u
 export const MAX_AGENT_COUNT = 3
 export const DEFAULT_AGENT_DESCRIPTION = 'Implement and adjust the assigned code scope, add or update focused tests, inspect your diff, and run the checks that cover your changes before handoff. Report changed files, commands and results, risks, and blockers to the primary Agent; never claim completion when a required check fails.'
+export const DEFAULT_AGENT_PERSONA = 'Focus on the assigned scope, inspect relevant code before editing, make focused changes, run checks that cover them, and report changed files, commands, results, risks, and blockers. Do not claim completion when a required check fails.'
 
 function requiredString(value, label, maxLength = 512, multiline = false) {
   if (typeof value !== 'string' || value.trim() === '') throw new Error('Missing required field: ' + label)
@@ -25,6 +26,9 @@ export function normalizeAgents(value, options = {}) {
     const description = entry.description === undefined
       ? DEFAULT_AGENT_DESCRIPTION
       : requiredString(entry.description, 'agents[' + index + '].description', 2000, true)
+    const persona = entry.persona === undefined
+      ? undefined
+      : requiredString(entry.persona, 'agents[' + index + '].persona', 8000, true)
     const reasoningEffort = entry.reasoningEffort === undefined
       ? undefined
       : requiredString(entry.reasoningEffort, 'agents[' + index + '].reasoningEffort', 128)
@@ -36,6 +40,7 @@ export function normalizeAgents(value, options = {}) {
       provider,
       model,
       description,
+      ...(persona === undefined ? {} : { persona }),
       ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
       ...(entry.maxTokens === undefined ? {} : { maxTokens: entry.maxTokens }),
     }

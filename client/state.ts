@@ -1,4 +1,4 @@
-import { AGENT_ID, DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT } from '../src/config.js'
+import { AGENT_ID, DEFAULT_AGENT_DESCRIPTION, DEFAULT_AGENT_PERSONA, MAX_AGENT_COUNT } from '../src/config.js'
 
 export const SETTINGS_NAMESPACE = 'multi-model-orchestrator'
 
@@ -37,6 +37,7 @@ export interface AgentInput {
   provider: string
   model: string
   description: string
+  persona?: string
   reasoningEffort?: string
   maxTokens?: number
 }
@@ -71,6 +72,7 @@ export function createAgentDraft(): AgentDraft {
     provider: '',
     model: '',
     description: DEFAULT_AGENT_DESCRIPTION,
+    persona: DEFAULT_AGENT_PERSONA,
     reasoningEffort: undefined,
     maxTokens: undefined,
     renderKey: createRenderKey(),
@@ -133,6 +135,7 @@ export function cleanAgents(agents: readonly AgentInput[]): AgentSettings[] {
     provider: agent.provider,
     model: agent.model,
     ...(agent.description.trim() === '' ? {} : { description: agent.description.trim() }),
+    ...(agent.persona?.trim() === '' || agent.persona === undefined ? {} : { persona: agent.persona.trim() }),
     ...(agent.reasoningEffort === undefined ? {} : { reasoningEffort: agent.reasoningEffort }),
     ...(agent.maxTokens === undefined ? {} : { maxTokens: agent.maxTokens }),
   }))

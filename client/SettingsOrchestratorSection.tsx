@@ -29,6 +29,7 @@ function hydrateAgent(agent: Record<string, unknown>): AgentDraft {
     provider: String(agent.provider ?? ''),
     model: String(agent.model ?? ''),
     description: String(agent.description ?? ''),
+    persona: String(agent.persona ?? agent.description ?? ''),
     ...(agent.reasoningEffort === undefined ? {} : { reasoningEffort: String(agent.reasoningEffort) }),
     ...(agent.maxTokens === undefined ? {} : { maxTokens: Number(agent.maxTokens) }),
   }
@@ -232,6 +233,10 @@ export function SettingsOrchestratorSection({ models, t }: ClientContext) {
             <label style={{ ...field, gridColumn: '1 / -1' }}>
               <span>{t('description')}</span>
               <textarea style={{ ...control, resize: 'vertical', minHeight: 72 }} value={agent.description} onChange={event => update(index, { description: event.target.value })} disabled={!writable || status === 'saving'} />
+            </label>
+            <label style={{ ...field, gridColumn: '1 / -1' }}>
+              <span>{t('persona')}</span>
+              <textarea style={{ ...control, resize: 'vertical', minHeight: 120 }} value={agent.persona ?? ''} onChange={event => update(index, { persona: event.target.value })} disabled={!writable || status === 'saving'} />
             </label>
             <label style={field}>
               <span>{t('maxTokens')}</span>

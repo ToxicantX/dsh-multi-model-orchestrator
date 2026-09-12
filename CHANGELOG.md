@@ -4,6 +4,13 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.8] - 2026-09-12
+
+### Changed
+
+- Raised the DSH compatibility baseline to 0.1.5-rc.2 and aligned the full DSH dependency graph to prevent mixed-release startup failures.
+- Added a separate per-Agent child prompt so routing summaries and child personas can be configured independently.
+
 ## [0.7.7] - 2026-09-07
 
 ### Fixed
@@ -116,7 +123,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.7...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.8...HEAD
+[0.7.8]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.5...v0.7.6
 [0.7.5]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.4...v0.7.5

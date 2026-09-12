@@ -18,7 +18,7 @@ The primary Agent acts as the product owner and engineering manager rather than 
 
 - Configure up to 3 reusable specialist Agents; reuse each tool across multiple child tasks.
 - Select models already available in DSH.
-- Give each Agent a stable ID and development scope.
+- Give each Agent a stable ID, development scope, and child-Agent prompt.
 - Select an optional reasoning effort from the exact levels advertised by the Agent's model.
 - Set an optional maximum output-token limit per Agent.
 - Make the primary Agent responsible for requirements, planning, assignment, integration, and final acceptance.
@@ -29,7 +29,7 @@ The primary Agent acts as the product owner and engineering manager rather than 
 
 ### Requirements
 
-- DeepSeek Harness 0.1.2-rc.1 or a compatible newer release
+- DeepSeek Harness 0.1.5-rc.2 or a compatible newer release
 - Node.js 22.19 or newer
 - At least one model available in DSH **Settings > Models**
 
@@ -58,7 +58,7 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 1. Open DSH Web.
 2. Go to **Settings > Agent orchestration**.
 3. Select **Add Agent**.
-4. Enter an Agent ID and development scope.
+4. Enter an Agent ID, development scope, and child-Agent prompt.
 5. Select one of the models available in DSH.
 6. Optionally select a reasoning effort supported by that model and set the maximum output-token limit.
 7. Save the configuration.
@@ -76,7 +76,8 @@ Reliability behavior: when no independent work remains, the primary uses foregro
 | --- | --- | --- |
 | Agent ID | Yes | Stable identity used for the subagent tool name and per-Agent runtime settings, such as `architect` or `reviewer`. |
 | Model | Yes | Provider and model selected from the DSH model catalog. |
-| Development scope | No | Task guidance for the Agent. New Agents start with a concise responsibility covering focused changes, appropriate checks, and clear reporting; customize it for the work the Agent handles. It does not determine Agent identity. |
+| Development scope | No | Short routing summary shown to the primary Agent when it chooses a specialist. It does not determine Agent identity. |
+| Child Agent prompt | No | Dedicated persona prompt sent to the selected child Agent. Legacy configurations without this field fall back to the development scope. |
 | Reasoning effort | No | One of the exact effort levels advertised by the selected model; omission uses the model default. |
 | Maximum output tokens | No | Positive integer limiting the Agent's generated output. |
 
@@ -130,7 +131,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 
 ### 环境要求
 
-- DeepSeek Harness 0.1.2-rc.1 或兼容的新版本
+- DeepSeek Harness 0.1.5-rc.2 或兼容的新版本
 - Node.js 22.19 或更高版本
 - DSH **设置 > 模型** 中至少有一个可用模型
 
@@ -159,7 +160,7 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 1. 打开 DSH Web。
 2. 进入 **设置 > Agent 编排**。
 3. 点击 **添加 Agent**。
-4. 填写 Agent ID 和开发职责。
+4. 填写 Agent ID、开发职责和子 Agent 提示词。
 5. 从 DSH 可用模型中选择一个模型。
 6. 根据需要选择该模型支持的推理等级并设置最大输出 Token。
 7. 保存配置。
@@ -177,7 +178,8 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 | --- | --- | --- |
 | Agent ID | 是 | 用于子 Agent 工具名称和逐 Agent 运行配置的稳定身份，例如 `architect` 或 `reviewer`。 |
 | 模型 | 是 | 从 DSH 模型目录中选择的 Provider 和 Model。 |
-| 开发职责 | 否 | Agent 的任务指引。新建 Agent 会自动填写精简职责，要求聚焦改动、按需检查并清晰报告；可根据 Agent 承担的工作调整。该字段不用于确定身份。 |
+| 开发职责 | 否 | 展示给主 Agent 的简短路由摘要，用于选择 specialist；该字段不用于确定身份。 |
+| 子 Agent 提示词 | 否 | 发送给对应子 Agent 的独立 persona 提示词。旧配置未填写该字段时，会回退使用开发职责。 |
 | 推理等级 | 否 | 所选模型实际提供的推理等级之一；省略时使用模型默认值。 |
 | 最大输出 Token | 否 | 限制 Agent 输出长度的正整数。 |
 
