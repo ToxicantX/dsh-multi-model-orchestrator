@@ -2,6 +2,15 @@
 
 Configure and run a team of model-backed specialist Agents in [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 
+[![Release](https://img.shields.io/github/v/release/ToxicantX/dsh-multi-model-orchestrator?label=release)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/ToxicantX/dsh-multi-model-orchestrator/total?label=downloads)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/releases)
+[![License](https://img.shields.io/github/license/ToxicantX/dsh-multi-model-orchestrator)](./LICENSE)
+[![Stars](https://img.shields.io/github/stars/ToxicantX/dsh-multi-model-orchestrator?label=stars)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/stargazers)
+[![Issues](https://img.shields.io/github/issues/ToxicantX/dsh-multi-model-orchestrator)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/issues)
+[![Tests](https://img.shields.io/github/actions/workflow/status/ToxicantX/dsh-multi-model-orchestrator/test.yml?branch=main&label=tests)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/actions/workflows/test.yml)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=nodedotjs&logoColor=white)](./package.json)
+[![DSH](https://img.shields.io/badge/dsh-0.1.6--alpha.1-4c8bf5)](https://github.com/deepseek-ai/deepseek-harness)
+
 [English](#english) | [中文](#中文)
 
 ## English
