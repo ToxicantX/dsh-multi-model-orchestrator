@@ -4,6 +4,10 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+### Changed
+
+- Raised the DSH compatibility baseline to 0.1.6-alpha.1 and aligned the full development dependency graph with the published release set.
+
 ## [0.7.8] - 2026-09-12
 
 ### Changed
