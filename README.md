@@ -1,6 +1,6 @@
 # DSH Multi-model Orchestrator
 
-Configure and run a team of model-backed specialist Agents in [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
+在 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 中配置并运行由不同模型驱动的专业 Agent 团队。
 
 [![Release](https://img.shields.io/github/v/release/ToxicantX/dsh-multi-model-orchestrator?label=release)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/ToxicantX/dsh-multi-model-orchestrator/total?label=downloads)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/releases)
@@ -11,109 +11,7 @@ Configure and run a team of model-backed specialist Agents in [DeepSeek Harness]
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=nodedotjs&logoColor=white)](./package.json)
 [![DSH](https://img.shields.io/badge/dsh-0.1.6--alpha.1-4c8bf5)](https://github.com/deepseek-ai/deepseek-harness)
 
-[English](#english) | [中文](#中文)
-
-## English
-
-### Overview
-
-DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can configure up to 3 reusable specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility. These configured Agents are reusable specialist tools; the number of child tasks is determined by meaningful work and runtime capacity, not by the roster size.
-
-When a session uses the **Multi-model orchestrator** preset, every configured Agent becomes an independent subagent tool that the primary Agent can delegate work to.
-
-The primary Agent acts as the product owner and engineering manager rather than the default developer. For non-trivial work, it defines the outcome and acceptance criteria, decomposes non-overlapping scopes, and delegates development, investigation, testing, and review before implementation begins. Each child exclusively owns one cohesive task and acceptance target until it settles; the primary coordinates only non-overlapping work, waits on dependencies, integrates returned work, and performs final acceptance. Truly small one-step changes can stay local.
-
-### Features
-
-- Configure up to 3 reusable specialist Agents; reuse each tool across multiple child tasks.
-- Select models already available in DSH.
-- Give each Agent a stable ID, development scope, and child-Agent prompt.
-- Select an optional reasoning effort from the exact levels advertised by the Agent's model.
-- Set an optional maximum output-token limit per Agent.
-- Make the primary Agent responsible for requirements, planning, assignment, integration, and final acceptance.
-- Give each child exclusive ownership of one cohesive task and acceptance target so the primary cannot duplicate its work.
-- Split non-trivial work by complexity into any number of meaningful, non-overlapping tasks with independent acceptance targets, while avoiding artificial or overly granular splits.
-- Create a new child for each independent task, including when multiple tasks use the same specialist; run independent tasks concurrently within runtime capacity and serialize file, ownership, or dependency overlaps.
-- Keep each running session on the Agent configuration it started with.
-
-### Requirements
-
-- DeepSeek Harness 0.1.6-alpha.1 or a compatible newer release
-- Node.js 22.19 or newer
-- At least one model available in DSH **Settings > Models**
-
-### Installation
-
-Install the plugin in the DSH Web profile:
-
-~~~powershell
-dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
-~~~
-
-Restart DSH Web after installation and refresh the browser. The plugin provisions and maintains its Agent preset automatically when the Host starts. It also provisions the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding official-name compatibility entries from Web selection lists. Exact official pre-marker copies are adopted safely; customized user-managed presets are never overwritten and remain visible when given a distinct name.
-
-Existing settings with more than 3 Agents are preserved during an upgrade. The first 3 remain active, the settings page continues to show the complete roster, and the next save requires reducing it to 3 or fewer.
-
-When running DSH from a source checkout, use `pnpm dsh` instead of `dsh` in the command.
-
-If startup reports that the managed preset was edited or conflicts with an existing preset, and you intend to discard those local changes, repair it explicitly:
-
-~~~powershell
-dsh plugin --profile web exec dsh-orchestrator-install --force
-~~~
-
-### Usage
-
-1. Open DSH Web.
-2. Go to **Settings > Agent orchestration**.
-3. Select **Add Agent**.
-4. Enter an Agent ID, development scope, and child-Agent prompt.
-5. Select one of the models available in DSH.
-6. Optionally select a reasoning effort supported by that model and set the maximum output-token limit.
-7. Save the configuration.
-8. Create a session with the **Multi-model orchestrator** preset.
-
-Create a new session after changing the Agent roster or model assignments. Sessions that are already running keep their original Agent configuration.
-
-During a non-trivial session, the primary Agent establishes acceptance criteria and assigns development tasks before editing. It treats the configured Agents as reusable specialist tools, decomposes work by complexity into any number of meaningful, non-overlapping tasks with independent acceptance targets, and avoids artificial or overly granular splits. Each task gets a new child, even when it matches a specialist already used for another task. Independent tasks run concurrently within runtime capacity; tasks that overlap files, ownership, or dependencies run serially. A suitable specialist is not kept idle while the primary performs development, but the primary does not invent work merely to use every Agent. Each child owns one cohesive task and one acceptance target until it returns; the primary may coordinate other clearly disjoint tasks but waits instead of implementing the same outcome. For corrections to the same task, it reuses the continuable child. After specialists return, the primary reviews integration boundaries and runs the final acceptance checks.
-
-Reliability behavior: when no independent work remains, the primary uses foreground child calls and does not repeatedly poll `list_agents` just to pass time. A running child that has not reported an error is treated as healthy. Elapsed time, silence, repeated or unchanged status, and another child finishing are not deadlock evidence, alone or together. Interrupts are limited to direct user cancellation, an explicit deadline that has arrived, a deadlock supported by concrete evidence, or verified repeated tool or execution failure. The primary never interrupts to request an early report, shorten a wait, regain control, begin integration, or avoid waiting, and never infers a deadlock from duration or lack of messages. `send_message` queues the next turn and does not redirect current work. After two occurrences of the same tool or execution-protocol error, a specialist switches to the simplest valid alternative tool call or reports the blocker and avoids repeated calls that fail or produce no useful output.
-
-### Agent fields
-
-| Field | Required | Description |
-| --- | --- | --- |
-| Agent ID | Yes | Stable identity used for the subagent tool name and per-Agent runtime settings, such as `architect` or `reviewer`. |
-| Model | Yes | Provider and model selected from the DSH model catalog. |
-| Development scope | No | Short routing summary shown to the primary Agent when it chooses a specialist. It does not determine Agent identity. |
-| Child Agent prompt | No | Dedicated persona prompt sent to the selected child Agent. Legacy configurations without this field fall back to the development scope. |
-| Reasoning effort | No | One of the exact effort levels advertised by the selected model; omission uses the model default. |
-| Maximum output tokens | No | Positive integer limiting the Agent's generated output. |
-
-### Local development
-
-~~~powershell
-git clone https://github.com/ToxicantX/dsh-multi-model-orchestrator.git
-cd dsh-multi-model-orchestrator
-pnpm install
-pnpm bundle
-pnpm typecheck
-pnpm test
-~~~
-
-Release management follows [Semantic Versioning](https://semver.org/) (SemVer). Record user-facing changes in [CHANGELOG.md](CHANGELOG.md), create tags as `vX.Y.Z`, and run the local preflight:
-
-~~~powershell
-pnpm release:check v0.7.0
-~~~
-
-Pushing a matching `vX.Y.Z` tag triggers verification and a GitHub Release with generated notes. npm publishing is not automatic.
-
-Install a local checkout into a DSH source profile:
-
-~~~powershell
-pnpm dsh plugin --profile web add -w D:/path/to/dsh-multi-model-orchestrator
-~~~
+[中文](#中文) | [English](#english)
 
 ## 中文
 
@@ -212,6 +110,108 @@ pnpm release:check v0.7.0
 推送匹配的 `vX.Y.Z` tag 会触发验证并创建带自动生成说明的 GitHub Release。npm 发布不会自动执行。
 
 将本地仓库安装到 DSH 源码 profile：
+
+~~~powershell
+pnpm dsh plugin --profile web add -w D:/path/to/dsh-multi-model-orchestrator
+~~~
+
+## English
+
+### Overview
+
+DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can configure up to 3 reusable specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility. These configured Agents are reusable specialist tools; the number of child tasks is determined by meaningful work and runtime capacity, not by the roster size.
+
+When a session uses the **Multi-model orchestrator** preset, every configured Agent becomes an independent subagent tool that the primary Agent can delegate work to.
+
+The primary Agent acts as the product owner and engineering manager rather than the default developer. For non-trivial work, it defines the outcome and acceptance criteria, decomposes non-overlapping scopes, and delegates development, investigation, testing, and review before implementation begins. Each child exclusively owns one cohesive task and acceptance target until it settles; the primary coordinates only non-overlapping work, waits on dependencies, integrates returned work, and performs final acceptance. Truly small one-step changes can stay local.
+
+### Features
+
+- Configure up to 3 reusable specialist Agents; reuse each tool across multiple child tasks.
+- Select models already available in DSH.
+- Give each Agent a stable ID, development scope, and child-Agent prompt.
+- Select an optional reasoning effort from the exact levels advertised by the Agent's model.
+- Set an optional maximum output-token limit per Agent.
+- Make the primary Agent responsible for requirements, planning, assignment, integration, and final acceptance.
+- Give each child exclusive ownership of one cohesive task and acceptance target so the primary cannot duplicate its work.
+- Split non-trivial work by complexity into any number of meaningful, non-overlapping tasks with independent acceptance targets, while avoiding artificial or overly granular splits.
+- Create a new child for each independent task, including when multiple tasks use the same specialist; run independent tasks concurrently within runtime capacity and serialize file, ownership, or dependency overlaps.
+- Keep each running session on the Agent configuration it started with.
+
+### Requirements
+
+- DeepSeek Harness 0.1.6-alpha.1 or a compatible newer release
+- Node.js 22.19 or newer
+- At least one model available in DSH **Settings > Models**
+
+### Installation
+
+Install the plugin in the DSH Web profile:
+
+~~~powershell
+dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
+~~~
+
+Restart DSH Web after installation and refresh the browser. The plugin provisions and maintains its Agent preset automatically when the Host starts. It also provisions the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding official-name compatibility entries from Web selection lists. Exact official pre-marker copies are adopted safely; customized user-managed presets are never overwritten and remain visible when given a distinct name.
+
+Existing settings with more than 3 Agents are preserved during an upgrade. The first 3 remain active, the settings page continues to show the complete roster, and the next save requires reducing it to 3 or fewer.
+
+When running DSH from a source checkout, use `pnpm dsh` instead of `dsh` in the command.
+
+If startup reports that the managed preset was edited or conflicts with an existing preset, and you intend to discard those local changes, repair it explicitly:
+
+~~~powershell
+dsh plugin --profile web exec dsh-orchestrator-install --force
+~~~
+
+### Usage
+
+1. Open DSH Web.
+2. Go to **Settings > Agent orchestration**.
+3. Select **Add Agent**.
+4. Enter an Agent ID, development scope, and child-Agent prompt.
+5. Select one of the models available in DSH.
+6. Optionally select a reasoning effort supported by that model and set the maximum output-token limit.
+7. Save the configuration.
+8. Create a session with the **Multi-model orchestrator** preset.
+
+Create a new session after changing the Agent roster or model assignments. Sessions that are already running keep their original Agent configuration.
+
+During a non-trivial session, the primary Agent establishes acceptance criteria and assigns development tasks before editing. It treats the configured Agents as reusable specialist tools, decomposes work by complexity into any number of meaningful, non-overlapping tasks with independent acceptance targets, and avoids artificial or overly granular splits. Each task gets a new child, even when it matches a specialist already used for another task. Independent tasks run concurrently within runtime capacity; tasks that overlap files, ownership, or dependencies run serially. A suitable specialist is not kept idle while the primary performs development, but the primary does not invent work merely to use every Agent. Each child owns one cohesive task and one acceptance target until it returns; the primary may coordinate other clearly disjoint tasks but waits instead of implementing the same outcome. For corrections to the same task, it reuses the continuable child. After specialists return, the primary reviews integration boundaries and runs the final acceptance checks.
+
+Reliability behavior: when no independent work remains, the primary uses foreground child calls and does not repeatedly poll `list_agents` just to pass time. A running child that has not reported an error is treated as healthy. Elapsed time, silence, repeated or unchanged status, and another child finishing are not deadlock evidence, alone or together. Interrupts are limited to direct user cancellation, an explicit deadline that has arrived, a deadlock supported by concrete evidence, or verified repeated tool or execution failure. The primary never interrupts to request an early report, shorten a wait, regain control, begin integration, or avoid waiting, and never infers a deadlock from duration or lack of messages. `send_message` queues the next turn and does not redirect current work. After two occurrences of the same tool or execution-protocol error, a specialist switches to the simplest valid alternative tool call or reports the blocker and avoids repeated calls that fail or produce no useful output.
+
+### Agent fields
+
+| Field | Required | Description |
+| --- | --- | --- |
+| Agent ID | Yes | Stable identity used for the subagent tool name and per-Agent runtime settings, such as `architect` or `reviewer`. |
+| Model | Yes | Provider and model selected from the DSH model catalog. |
+| Development scope | No | Short routing summary shown to the primary Agent when it chooses a specialist. It does not determine Agent identity. |
+| Child Agent prompt | No | Dedicated persona prompt sent to the selected child Agent. Legacy configurations without this field fall back to the development scope. |
+| Reasoning effort | No | One of the exact effort levels advertised by the selected model; omission uses the model default. |
+| Maximum output tokens | No | Positive integer limiting the Agent's generated output. |
+
+### Local development
+
+~~~powershell
+git clone https://github.com/ToxicantX/dsh-multi-model-orchestrator.git
+cd dsh-multi-model-orchestrator
+pnpm install
+pnpm bundle
+pnpm typecheck
+pnpm test
+~~~
+
+Release management follows [Semantic Versioning](https://semver.org/) (SemVer). Record user-facing changes in [CHANGELOG.md](CHANGELOG.md), create tags as `vX.Y.Z`, and run the local preflight:
+
+~~~powershell
+pnpm release:check v0.7.0
+~~~
+
+Pushing a matching `vX.Y.Z` tag triggers verification and a GitHub Release with generated notes. npm publishing is not automatic.
+
+Install a local checkout into a DSH source profile:
 
 ~~~powershell
 pnpm dsh plugin --profile web add -w D:/path/to/dsh-multi-model-orchestrator
