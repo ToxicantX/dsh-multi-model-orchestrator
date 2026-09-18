@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.10] - 2026-09-18
+
+### Fixed
+
+- Kept the managed `orchestrator` compatibility preset out of the Web selection catalog when DSH dispatches the roster method through its service prototype, while preserving the legacy ID for existing sessions.
+
 ## [0.7.9] - 2026-09-16
 
 ### Changed
@@ -129,7 +135,9 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.8...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.10...HEAD
+[0.7.10]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.9...v0.7.10
+[0.7.9]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.8...v0.7.9
 [0.7.8]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.5...v0.7.6

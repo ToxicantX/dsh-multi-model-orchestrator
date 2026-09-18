@@ -409,6 +409,25 @@ test('host catalog hides only the managed legacy alias and restores the service'
   assert.equal(agentPresets.remoteExportList, originalList)
 })
 
+test('host catalog filtering also patches a prototype service method', async () => {
+  const response = {
+    presets: [
+      { id: 'multi-model-orchestrator', name: ORCHESTRATOR_PRESET_NAME },
+      { id: LEGACY_PRESET_ID, name: ORCHESTRATOR_PRESET_NAME },
+    ],
+    authorable: true,
+  }
+  const originalList = async function () { return response }
+  const servicePrototype = { remoteExportList: originalList }
+  const agentPresets = Object.create(servicePrototype)
+  const restore = hideLegacyPresetFromCatalog(agentPresets)
+  const filtered = await agentPresets.remoteExportList()
+  assert.deepEqual(filtered.presets.map(preset => preset.id), ['multi-model-orchestrator'])
+  assert.notEqual(servicePrototype.remoteExportList, originalList)
+  restore()
+  assert.equal(servicePrototype.remoteExportList, originalList)
+})
+
 test('host settings route enforces origin, method, media type, shape, size, and normalization', async () => {
   const fake = settingsContext({ agents: [agent('before')] })
   const service = new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath: undefined })

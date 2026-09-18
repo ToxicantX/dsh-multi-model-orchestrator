@@ -124,9 +124,31 @@ export function hideLegacyPresetFromCatalog(agentPresets) {
       )),
     }
   }
-  agentPresets.remoteExportList = filteredList
+
+  // DSH may inject a service proxy whose assignment target is not the object
+  // used by the gateway. Patch the method owner so direct calls and remote
+  // dispatch both resolve the same filtering wrapper.
+  let target = agentPresets
+  let descriptor = Object.getOwnPropertyDescriptor(target, 'remoteExportList')
+  while (descriptor === undefined && target !== null) {
+    target = Object.getPrototypeOf(target)
+    descriptor = target === null ? undefined : Object.getOwnPropertyDescriptor(target, 'remoteExportList')
+  }
+  if (target === null || descriptor === undefined) throw new TypeError('agentPresets.remoteExportList is not replaceable')
+  if (descriptor?.writable === false || descriptor?.configurable === false && descriptor?.writable !== true) {
+    throw new TypeError('agentPresets.remoteExportList is not replaceable')
+  }
+  Object.defineProperty(target, 'remoteExportList', {
+    ...(descriptor ?? { configurable: true, enumerable: false, writable: true }),
+    value: filteredList,
+  })
   return () => {
-    if (agentPresets.remoteExportList === filteredList) agentPresets.remoteExportList = originalList
+    if (target !== null && target.remoteExportList === filteredList) {
+      Object.defineProperty(target, 'remoteExportList', {
+        ...(descriptor ?? { configurable: true, enumerable: false, writable: true }),
+        value: originalList,
+      })
+    }
   }
 }
 
