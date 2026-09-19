@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.11] - 2026-09-19
+
+### Fixed
+
+- Clarified child liveness and deadlock detection: the primary now treats `running` as active work, distinguishes `idle`/`ready` from completion, requires concrete blocker evidence before interruption, and verifies the single-turn semantics of `interrupt_agent` instead of ending or repeatedly interrupting a healthy child.
+
 ## [0.7.10] - 2026-09-18
 
 ### Fixed
@@ -135,7 +141,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.10...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.11...HEAD
+[0.7.11]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.10...v0.7.11
 [0.7.10]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.9...v0.7.10
 [0.7.9]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.8...v0.7.9
 [0.7.8]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.7...v0.7.8

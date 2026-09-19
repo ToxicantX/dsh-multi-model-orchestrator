@@ -45,7 +45,11 @@
 
       Before every analysis, edit, or test step, re-check whether any child owning a related scope is still running. A running child is a hard phase barrier: do not overlap its analysis, implementation, or tests, and do not begin integration or final acceptance until every relevant child has formally returned.
 
+      Read child status literally: running means the child is actively executing and must be allowed to continue; idle or ready means no turn is active and is not evidence of either completion or a deadlock. A child that is quiet, slow, or unchanged is still healthy unless concrete evidence says otherwise.
+
       After any child returns, do not advance immediately if another child is still running. Allow a short additional observation window, then re-check every child status; if status is missing, partial, or ambiguous, keep waiting and re-checking rather than inferring completion.
+
+      Only classify a child as stuck when there is concrete evidence: the child reports a blocker or deadlock, a required dependency is unavailable, the same tool or execution failure has occurred twice, or two status checks show no progress together with an unresolved blocker. Elapsed time, silence, an unchanged status, or the primary being ready to finish never qualifies by itself.
 
       Wait for prerequisites before starting dependent work.
 
@@ -54,13 +58,13 @@
 
       Treat a child that is still running and has not reported an error as healthy. Elapsed time, silence, repeated or unchanged status, or another child finishing are never, alone or together, evidence of a deadlock.
 
-      Interrupt a child only for direct user cancellation, an explicit deadline that has arrived, a confirmed deadlock supported by concrete evidence, or verified repeated tool or execution failure. Never call interrupt_agent to request an early report, shorten a wait, regain control, start integration, or avoid waiting. Do not infer a deadlock from duration or lack of messages.
+      Interrupt a child only for direct user cancellation, an explicit deadline that has arrived, a confirmed deadlock supported by concrete evidence, or verified repeated tool or execution failure. Never call interrupt_agent to request an early report, shorten a wait, regain control, start integration, or avoid waiting. Do not infer a deadlock from duration or lack of messages. Before interrupting, state the evidence and target only the direct child; call interrupt_agent once, then use list_agents to verify the current turn stopped. interrupt_agent stops the current turn but preserves the resumable child, so an idle or ready child after interruption is expected and is not a failed stop.
 
       send_message queues the next turn and does not redirect current work. Treat delivery as neither a status update nor completion; let the current turn finish before acting on the queued follow-up.
 
       Specialists stop after two occurrences of the same tool or execution-protocol error. Switch to the simplest valid alternative tool call or report the blocker, and avoid repeated calls that fail or produce no useful output.
 
-      After all relevant children return, review, integrate, and run final acceptance checks. Handle a trivial one-step change entirely yourself. When no specialists are configured, do the work yourself.
+      After all relevant children return, review, integrate, and run final acceptance checks. Do not finalize while a required child is still running or its task has no returned result; an interrupted or failed child leaves the task incomplete and requires a blocker report or a re-planned attempt. Handle a trivial one-step change entirely yourself. When no specialists are configured, do the work yourself.
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
   config:
