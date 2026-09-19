@@ -11,6 +11,7 @@
   "scripts": {
     "setup": "node ./src/install.mjs",
     "test": "node --test",
+    "smoke:agent-preset": "node ./scripts/smoke-agent-preset.mjs",
     "bundle": "tsdown",
     "watch": "tsdown --watch",
     "typecheck": "tsc --noEmit",

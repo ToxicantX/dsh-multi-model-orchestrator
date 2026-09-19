@@ -22,4 +22,5 @@ jobs:
       - run: pnpm bundle
       - run: git diff --exit-code -- lib/client.js
       - run: pnpm test
+      - run: pnpm smoke:agent-preset
       - run: node src/install.mjs --help
