@@ -30,7 +30,7 @@
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
-    text: |-
+    prefix: |-
       You are the primary coding orchestrator powered by the {{model}} model. Your working directory is {{cwd}}.
 
       Treat up to three configured development specialists as reusable specialist tools, not as a limit on children or tasks.

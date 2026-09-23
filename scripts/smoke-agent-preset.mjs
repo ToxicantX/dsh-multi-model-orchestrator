@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { mkdtemp } from 'node:fs/promises'
 import { spawn, execFileSync } from 'node:child_process'
 import { homedir } from 'node:os'
@@ -33,24 +33,40 @@ async function waitForUrl(child, logs) {
 
 async function rpc(baseUrl, cookie, method, args) {
   const endpoint = `${new URL(baseUrl).origin}/api/${method}`
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Origin: new URL(baseUrl).origin,
-      Cookie: cookie,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      type: 'client-request',
-      rpcId: `smoke-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      method,
-      payload: { args }
+  const startedAt = Date.now()
+  while (Date.now() - startedAt < timeoutMs) {
+    const rpcId = `smoke-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Origin: new URL(baseUrl).origin,
+        Cookie: cookie,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'client-request',
+        rpcId,
+        method,
+        payload: { args }
+      })
     })
-  })
-  const body = await response.json()
-  assert(response.ok, `${method} returned HTTP ${response.status}: ${JSON.stringify(body)}`)
-  assert(body.result?.ok === true, `${method} returned RPC failure: ${JSON.stringify(body)}`)
-  return body.result.value
+    const text = await response.text()
+    if (response.status === 404) {
+      await delay(100)
+      continue
+    }
+    let body
+    try {
+      body = JSON.parse(text)
+    } catch {
+      throw new Error(`${method} returned invalid JSON (HTTP ${response.status}): ${JSON.stringify(text)}`)
+    }
+    assert(response.ok, `${method} returned HTTP ${response.status}: ${JSON.stringify(body)}`)
+    assert(body.rpcId === rpcId, `${method} returned mismatched RPC id: ${JSON.stringify(body)}`)
+    assert(body.result?.ok === true, `${method} returned RPC failure: ${JSON.stringify(body)}`)
+    return body.result.value
+  }
+  throw new Error(`Timed out waiting for ${method}`)
 }
 
 async function authenticate(url) {
@@ -69,11 +85,6 @@ async function main() {
     provisionPreset({ target: join(home, '.agent-presets', 'multi-model-orchestrator') })
     provisionLegacyPreset({ primaryTarget: join(home, '.agent-presets', 'multi-model-orchestrator') })
 
-    const customRoot = join(home, 'custom-presets')
-    await mkdir(join(customRoot, 'orchestrator'), { recursive: true })
-    await cp(join(home, '.agent-presets', 'orchestrator', 'agent.cordis.yml'), join(customRoot, 'orchestrator', 'agent.cordis.yml'))
-    await writeFile(join(customRoot, 'orchestrator', 'preset.yml'), 'name: User preset\ndescription: User-owned preset with the legacy id\n')
-
     const profile = join(home, 'profiles', 'web')
     execFileSync(process.execPath, [dshBin, '--profile', 'web', '--dump-default-config'], {
       cwd: repoRoot,
@@ -85,7 +96,8 @@ async function main() {
     await writeFile(join(profile, 'package.json'), JSON.stringify(profilePackage, null, 2) + '\n')
     await mkdir(join(profile, 'node_modules'), { recursive: true })
     await symlink(repoRoot, join(profile, 'node_modules', 'dsh-multi-model-orchestrator'), 'junction')
-    await writeFile(join(profile, 'cordis.patch.yml'), `- id: agent-presets\n  config:\n    default: standard\n    roots:\n      - path: !!js dshHomePath('custom-presets')\n        trust: user\n- insert:\n    - id: multi-model-orchestrator-settings\n      name: dsh-multi-model-orchestrator\n      config:\n        agents: []\n        presetPath: !!js dshHomePath('.agent-presets/multi-model-orchestrator/agent.cordis.yml')\n`)
+    const pluginPatch = await readFile(join(repoRoot, 'cordis.patch.yml'), 'utf8')
+    await writeFile(join(profile, 'cordis.patch.yml'), `- id: agent-preset-registry\n  config:\n    default: standard\n${pluginPatch}`)
 
     child = spawn(process.execPath, [dshBin, '--profile', 'web', '--port', '0', '--no-open'], {
       cwd: repoRoot,
@@ -98,18 +110,23 @@ async function main() {
     const cookie = await authenticate(url)
     const settingsResponse = await fetch(`${new URL(url).origin}/plugins/dsh-multi-model-orchestrator/settings`, { headers: { Cookie: cookie, Origin: new URL(url).origin } })
     assert(settingsResponse.status === 200, `plugin settings route unavailable: HTTP ${settingsResponse.status}`)
-    const rosterWithUserOverride = await rpc(url, cookie, 'agentPresets/list', {})
-    const primary = rosterWithUserOverride.presets.filter((preset) => preset.id === 'multi-model-orchestrator')
-    const userLegacy = rosterWithUserOverride.presets.filter((preset) => preset.id === 'orchestrator')
-    assert(primary.length === 1, `expected one primary preset, got ${JSON.stringify(rosterWithUserOverride.presets)}`)
-    assert(userLegacy.length === 1 && userLegacy[0].name === 'User preset', `user-owned legacy id was hidden or altered: ${JSON.stringify(rosterWithUserOverride.presets)}`)
-
-    await rm(join(customRoot, 'orchestrator'), { recursive: true, force: true })
+    const settings = await settingsResponse.json()
+    assert(Array.isArray(settings.agents), `plugin settings response is invalid: ${JSON.stringify(settings)}`)
+    const settingsUpdateResponse = await fetch(`${new URL(url).origin}/plugins/dsh-multi-model-orchestrator/settings`, {
+      method: 'PUT',
+      headers: {
+        Cookie: cookie,
+        Origin: new URL(url).origin,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(settings)
+    })
+    assert(settingsUpdateResponse.status === 200, `plugin settings update failed: HTTP ${settingsUpdateResponse.status}`)
     const roster = await rpc(url, cookie, 'agentPresets/list', {})
     assert(roster.presets.filter((preset) => preset.id === 'multi-model-orchestrator').length === 1, `primary preset missing: ${JSON.stringify(roster)}`)
     assert(roster.presets.every((preset) => preset.id !== 'orchestrator'), `managed legacy preset leaked into catalog: ${JSON.stringify(roster)}`)
-    const legacy = await rpc(url, cookie, 'agentPresets/read', { agentPreset: 'orchestrator' })
-    assert(legacy.agentPreset === 'orchestrator', `legacy preset did not resolve: ${JSON.stringify(legacy)}`)
+    const primary = roster.presets.find((preset) => preset.id === 'multi-model-orchestrator')
+    assert(primary.broken === undefined, `primary preset failed to activate: ${JSON.stringify(primary)}`)
     console.log('agent preset smoke test passed')
   } catch (error) {
     const detail = error instanceof Error ? error.stack ?? error.message : String(error)

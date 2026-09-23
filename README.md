@@ -9,7 +9,7 @@
 [![Issues](https://img.shields.io/github/issues/ToxicantX/dsh-multi-model-orchestrator)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/issues)
 [![Tests](https://img.shields.io/github/actions/workflow/status/ToxicantX/dsh-multi-model-orchestrator/test.yml?branch=main&label=tests)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/actions/workflows/test.yml)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=nodedotjs&logoColor=white)](./package.json)
-[![DSH](https://img.shields.io/badge/dsh-0.1.6--alpha.1-4c8bf5)](https://github.com/deepseek-ai/deepseek-harness)
+[![DSH](https://img.shields.io/badge/dsh-0.1.7--alpha.2-4c8bf5)](https://github.com/deepseek-ai/deepseek-harness)
 
 [中文](#中文) | [English](#english)
 
@@ -38,7 +38,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 
 ### 环境要求
 
-- DeepSeek Harness 0.1.6-alpha.1 或兼容的新版本
+- DeepSeek Harness 0.1.7-alpha.2 或兼容的新版本
 - Node.js 22.19 或更高版本
 - DSH **设置 > 模型** 中至少有一个可用模型
 
@@ -50,7 +50,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 ~~~
 
-安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会自动预置并维护 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复，并从 Web 选择列表中隐藏使用官方显示名的兼容项。内容完全匹配官方旧版的无 marker preset 会被安全收编；经过自定义的用户 preset 不会被覆盖，改用不同名称时仍保持可见。
+安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会注册 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复，并从 Web 选择列表中隐藏使用官方显示名的兼容项。内容完全匹配官方旧版的无 marker preset 会被安全收编；经过自定义的用户 preset 不会被覆盖，改用不同名称时仍保持可见。
 
 升级时，已有的超过 3 个 Agent 的配置会被完整保留。运行时先启用前 3 个，设置页继续显示完整列表，并要求在下次保存前缩减到 3 个以内。
 
@@ -140,7 +140,7 @@ The primary Agent acts as the product owner and engineering manager rather than 
 
 ### Requirements
 
-- DeepSeek Harness 0.1.6-alpha.1 or a compatible newer release
+- DeepSeek Harness 0.1.7-alpha.2 or a compatible newer release
 - Node.js 22.19 or newer
 - At least one model available in DSH **Settings > Models**
 
@@ -152,7 +152,7 @@ Install the plugin in the DSH Web profile:
 dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 ~~~
 
-Restart DSH Web after installation and refresh the browser. The plugin provisions and maintains its Agent preset automatically when the Host starts. It also provisions the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding official-name compatibility entries from Web selection lists. Exact official pre-marker copies are adopted safely; customized user-managed presets are never overwritten and remain visible when given a distinct name.
+Restart DSH Web after installation and refresh the browser. The plugin registers its Agent preset automatically when the Host starts. It also registers the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding official-name compatibility entries from Web selection lists. Exact official pre-marker copies are adopted safely; customized user-managed presets are never overwritten and remain visible when given a distinct name.
 
 Existing settings with more than 3 Agents are preserved during an upgrade. The first 3 remain active, the settings page continues to show the complete roster, and the next save requires reducing it to 3 or fewer.
 

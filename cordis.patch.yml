@@ -1,6 +1,27 @@
 - insert:
-    - id: multi-model-orchestrator-settings
+    - id: multi-model-orchestrator
       name: 'dsh-multi-model-orchestrator'
       config:
         agents: []
         presetPath: !!js dshHomePath('.agent-presets/multi-model-orchestrator/agent.cordis.yml')
+    - id: preset-multi-model-orchestrator
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: multi-model-orchestrator
+        name: Multi-model orchestrator
+        description: A provider-neutral primary agent that delegates to independently configured specialists.
+        order: 10
+        plugins:
+          - id: multi-model-orchestrator-composition
+            name: dsh-multi-model-orchestrator/preset-loader
+    - id: preset-orchestrator-legacy
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: orchestrator
+        name: Multi-model orchestrator
+        description: Compatibility alias for sessions created before v0.6.2.
+        plugins:
+          - id: multi-model-orchestrator-composition
+            name: dsh-multi-model-orchestrator/preset-loader
+            config:
+              legacy: true

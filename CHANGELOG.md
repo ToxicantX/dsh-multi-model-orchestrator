@@ -4,6 +4,17 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.12] - 2026-09-23
+
+### Changed
+
+- Raised the DSH compatibility baseline to 0.1.7-alpha.2, migrated Agent settings to volatile plugin configuration, and registered the primary and legacy presets through the declarative Agent preset API.
+
+### Fixed
+
+- Restored the Agent orchestration settings page after the legacy Settings namespace API was removed, and replaced opaque empty-response JSON failures with an actionable HTTP diagnostic.
+- Updated the packaged preset for the current persona configuration contract and resolved its child plugins through the declaring DSH bundle.
+
 ## [0.7.11] - 2026-09-19
 
 ### Fixed
@@ -141,7 +152,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.11...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.12...HEAD
+[0.7.12]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.11...v0.7.12
 [0.7.11]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.10...v0.7.11
 [0.7.10]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.9...v0.7.10
 [0.7.9]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.8...v0.7.9

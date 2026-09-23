@@ -22,7 +22,7 @@ export const AgentSettingsSchema = z.object({
 
 export const SettingsSchema = z.object({ agents: z.array(AgentSettingsSchema).default([]) })
 export const Config = z.object({
-  agents: z.array(AgentSettingsSchema).default([]),
+  agents: z.array(AgentSettingsSchema).default([]).volatile(),
   presetPath: z.string(),
 })
 
@@ -48,9 +48,8 @@ function sameOrigin(req) {
 
 export class MultiModelOrchestratorSettings {
   constructor(ctx, config) {
-    const entry = { agents: config.agents ?? [] }
-    this.source = () => entry
-    this.scope = undefined
+    this.ctx = ctx
+    this.agents = config.agents
     const refreshGeneration = () => {
       if (config.presetPath === undefined) return
       try {
@@ -60,19 +59,15 @@ export class MultiModelOrchestratorSettings {
         if (error?.code !== 'ENOENT') throw error
       }
     }
-    ctx.effect(() => {
-      this.scope = ctx.settings.register(ORCHESTRATOR_SETTINGS_NAMESPACE, SettingsSchema, {
-        base: entry,
-        validate: value => { normalizeAgents(value.agents, { allowEmpty: true, allowOverLimit: true }) },
-      })
-      this.source = () => this.scope.get()
-      refreshGeneration()
-      return this.scope.watch(refreshGeneration)
+    ctx.effect(() => ctx.settings.configure({ auto: false }, ctx.fiber))
+    ctx.on('loader/volatile-update', paths => {
+      if (paths.some(path => path[0] === 'agents')) refreshGeneration()
     })
+    refreshGeneration()
   }
 
   configuredAgents() {
-    return normalizeAgents(this.source().agents, { allowEmpty: true, allowOverLimit: true }).map(agent => ({ ...agent }))
+    return normalizeAgents(this.agents.get(), { allowEmpty: true, allowOverLimit: true }).map(agent => ({ ...agent }))
   }
 
   currentAgents() {
@@ -80,9 +75,8 @@ export class MultiModelOrchestratorSettings {
   }
 
   async replaceAgents(agents) {
-    if (this.scope === undefined) throw new Error('orchestrator settings are not ready')
     const normalized = normalizeAgents(agents, { allowEmpty: true })
-    await this.scope.replace({ agents: normalized })
+    await this.ctx.settings.replace(ORCHESTRATOR_SETTINGS_NAMESPACE, { agents: normalized })
     return this.currentAgents()
   }
 }

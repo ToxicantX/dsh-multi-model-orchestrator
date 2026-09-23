@@ -18,8 +18,14 @@ type SettingsResponse = { agents?: Array<Record<string, unknown>> }
 
 async function settingsRequest(init?: RequestInit, signal?: AbortSignal): Promise<SettingsResponse> {
   const response = await fetch(SETTINGS_ENDPOINT, { ...init, signal })
-  const value = await response.json() as SettingsResponse & { error?: string }
-  if (!response.ok) throw new Error(value.error ?? 'Agent settings request failed')
+  const body = await response.text()
+  let value: SettingsResponse & { error?: string }
+  try {
+    value = body === '' ? {} : JSON.parse(body) as SettingsResponse & { error?: string }
+  } catch {
+    throw new Error(`Agent settings request returned invalid JSON (HTTP ${response.status})`)
+  }
+  if (!response.ok) throw new Error(value.error ?? `Agent settings request failed (HTTP ${response.status})`)
   return value
 }
 

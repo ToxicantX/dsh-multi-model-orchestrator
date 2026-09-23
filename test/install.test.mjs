@@ -15,24 +15,39 @@ const agent = (id, overrides = {}) => ({ id, provider: 'provider-' + id, model: 
 
 function settingsContext(initial = { agents: [] }) {
   let current = structuredClone(initial)
-  let watched
-  const registrations = []
+  const listeners = new Map()
+  const presentations = []
+  const replacements = []
   const provided = new Map()
   const routes = []
+  const agents = { get: () => structuredClone(current.agents) }
   const ctx = {
     fiber: { state: 0 },
     reflect: { provide() {} },
     provide(name, value) { provided.set(name, value) },
     webServer: { register(route) { routes.push(route); return () => {} } },
     agentPresets: { async remoteExportList() { return { presets: [], authorable: true } } },
-    settings: { register(ns, schema, options) {
-      registrations.push({ ns, schema, options })
-      return { get: () => current, watch: callback => { watched = callback; return () => {} }, replace: async next => { const previous = current; current = structuredClone(next); await watched?.(current, previous) } }
-    } },
+    settings: {
+      configure(presentation, owner) { presentations.push({ presentation, owner }); return () => {} },
+      async replace(ns, next) {
+        replacements.push({ ns, next: structuredClone(next) })
+        current = structuredClone(next)
+        listeners.get('loader/volatile-update')?.([['agents']])
+      },
+    },
+    on(name, callback) { listeners.set(name, callback); return () => listeners.delete(name) },
     inject(_names, callback) { callback(ctx) },
     effect(callback) { return callback() },
   }
-  return { ctx, registrations, provided, routes, set(next) { const previous = current; current = structuredClone(next); watched?.(current, previous) } }
+  return {
+    ctx,
+    config: { agents, presetPath: undefined },
+    presentations,
+    replacements,
+    provided,
+    routes,
+    set(next) { current = structuredClone(next); listeners.get('loader/volatile-update')?.([['agents']]) },
+  }
 }
 
 async function invokeSettingsRoute(service, { method = 'GET', origin, contentType, body } = {}) {
@@ -366,22 +381,22 @@ test('host exports a unique settings namespace and validates service snapshots',
   assert.deepEqual(hostPlugin.inject, hostInject)
   assert.deepEqual(hostInject, ['settings', 'webServer', 'agentPresets'])
   assert.equal(hostPlugin.Config, HostConfig)
+  assert.equal(typeof HostConfig({ agents: [] }).agents.get, 'function')
   const fake = settingsContext({ agents: [agent('solo')] })
-  const service = new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath: undefined })
+  const service = new MultiModelOrchestratorSettings(fake.ctx, fake.config)
   assert.deepEqual(service.currentAgents(), [agent('solo')])
   fake.set({ agents: [] })
   assert.deepEqual(service.currentAgents(), [])
   fake.set({ agents: [{ id: 'bad id', provider: 'p', model: 'm' }] })
   assert.throws(() => service.currentAgents(), /Invalid agent id/)
-  assert.equal(fake.registrations[0].ns, ORCHESTRATOR_SETTINGS_NAMESPACE)
+  assert.deepEqual(fake.presentations[0], { presentation: { auto: false }, owner: fake.ctx.fiber })
 })
 
 test('host preserves an oversized legacy roster while activating only three Agents', async () => {
   const legacy = Array.from({ length: MAX_AGENT_COUNT + 1 }, (_, index) => agent('legacy-' + index))
   const fake = settingsContext({ agents: legacy })
-  const service = new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath: undefined })
+  const service = new MultiModelOrchestratorSettings(fake.ctx, fake.config)
 
-  assert.doesNotThrow(() => fake.registrations[0].options.validate({ agents: legacy }))
   assert.deepEqual(service.configuredAgents(), legacy)
   assert.deepEqual(service.currentAgents(), legacy.slice(0, MAX_AGENT_COUNT))
   assert.deepEqual((await invokeSettingsRoute(service)).value.agents, legacy)
@@ -390,8 +405,9 @@ test('host preserves an oversized legacy roster while activating only three Agen
 
 test('host endpoint replaces only validated Agent settings', async () => {
   const fake = settingsContext({ agents: [agent('before')] })
-  const service = new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath: undefined })
+  const service = new MultiModelOrchestratorSettings(fake.ctx, fake.config)
   assert.deepEqual(await service.replaceAgents([agent('after')]), [agent('after')])
+  assert.equal(fake.replacements[0].ns, ORCHESTRATOR_SETTINGS_NAMESPACE)
   assert.equal(settingsRoute(service).path, ORCHESTRATOR_SETTINGS_ENDPOINT)
   await assert.rejects(() => service.replaceAgents([{ id: 'bad id', provider: 'p', model: 'm' }]), /Invalid agent id/)
 })
@@ -437,7 +453,7 @@ test('host catalog filtering also patches a prototype service method', async () 
 
 test('host settings route enforces origin, method, media type, shape, size, and normalization', async () => {
   const fake = settingsContext({ agents: [agent('before')] })
-  const service = new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath: undefined })
+  const service = new MultiModelOrchestratorSettings(fake.ctx, fake.config)
 
   const get = await invokeSettingsRoute(service)
   assert.equal(get.status, 200)
@@ -471,7 +487,7 @@ test('host activation provisions the preset before registering its service and r
     const target = join(root, 'multi-model-orchestrator')
     const presetPath = join(target, 'agent.cordis.yml')
     const fake = settingsContext({ agents: [] })
-    applyHost(fake.ctx, { agents: [], presetPath })
+    applyHost(fake.ctx, { ...fake.config, presetPath })
     assert.ok((await stat(presetPath)).isFile())
     assert.ok((await stat(join(target, 'preset.yml'))).isFile())
     assert.ok((await stat(join(target, PRESET_MARKER))).isFile())
@@ -489,7 +505,7 @@ test('host onChange touches an existing preset path', async () => {
     await writeFile(presetPath, 'fixed')
     const before = (await stat(presetPath)).mtimeMs
     const fake = settingsContext({ agents: [] })
-    new MultiModelOrchestratorSettings(fake.ctx, { agents: [], presetPath })
+    new MultiModelOrchestratorSettings(fake.ctx, { ...fake.config, presetPath })
     await new Promise(resolve => setTimeout(resolve, 20))
     fake.set({ agents: [agent('new')] })
     const after = (await stat(presetPath)).mtimeMs
@@ -504,12 +520,14 @@ test('package declares bundle and client integration exports', () => {
   ])
   assert.equal(packageJson.exports['./host'], './host.js')
   assert.equal(packageJson.exports['./agent'], './agent.js')
+  assert.equal(packageJson.exports['./preset-loader'], './preset-loader.js')
   assert.equal(packageJson.exports['./client'], './lib/client.js')
-  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-system-prompt'], '^0.1.6-alpha.1')
-  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-tool-subagent'], '^0.1.6-alpha.1')
-  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh-system-prompt'], '0.1.6-alpha.1')
-  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh-tool-subagent'], '0.1.6-alpha.1')
-  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh'], '0.1.6-alpha.1')
+  assert.equal(packageJson.peerDependencies['@deepseek-ai/cordis-plugin-include'], '~1.0.9')
+  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-system-prompt'], '^0.1.7-alpha.2')
+  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-tool-subagent'], '^0.1.7-alpha.2')
+  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh-system-prompt'], '0.1.7-alpha.2')
+  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh-tool-subagent'], '0.1.7-alpha.2')
+  assert.equal(packageJson.devDependencies['@deepseek-ai/dsh'], '0.1.7-alpha.2')
   assert.ok(packageJson.files.includes('src/preset.js'))
   assert.ok(packageJson.files.includes('preset-legacy/'))
 })
