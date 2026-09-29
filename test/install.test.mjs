@@ -527,11 +527,11 @@ test('package declares bundle and client integration exports', () => {
   assert.equal(packageJson.exports['./preset-loader'], './preset-loader.js')
   assert.equal(packageJson.exports['./client'], './lib/client.js')
   assert.equal(packageJson.peerDependencies['@deepseek-ai/cordis-plugin-include'], '~1.0.9')
-  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-system-prompt'], '^0.1.7-rc.2')
-  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-tool-subagent'], '^0.1.7-rc.2')
+  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-system-prompt'], '^0.2.0-rc.1')
+  assert.equal(packageJson.peerDependencies['@deepseek-ai/dsh-tool-subagent'], '^0.2.0-rc.1')
   for (const [name, version] of Object.entries(packageJson.devDependencies)) {
     if (name === '@deepseek-ai/dsh' || name.startsWith('@deepseek-ai/dsh-')) {
-      assert.equal(version, '0.1.7-rc.2', `${name} must match the tested DSH release`)
+      assert.equal(version, '0.2.0-rc.1', `${name} must match the tested DSH release`)
     }
   }
   assert.ok(packageJson.files.includes('src/preset.js'))

@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.14] - 2026-09-29
+
+### Changed
+
+- Raised the DSH compatibility baseline to 0.2.0-rc.1 and aligned the complete development dependency graph with the rc.1 release set.
+
 ## [0.7.13] - 2026-09-28
 
 ### Changed
@@ -163,7 +169,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.13...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.14...HEAD
+[0.7.14]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.13...v0.7.14
 [0.7.13]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.12...v0.7.13
 [0.7.12]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.11...v0.7.12
 [0.7.11]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.10...v0.7.11

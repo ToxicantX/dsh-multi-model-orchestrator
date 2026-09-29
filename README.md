@@ -9,7 +9,7 @@
 [![Issues](https://img.shields.io/github/issues/ToxicantX/dsh-multi-model-orchestrator)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/issues)
 [![Tests](https://img.shields.io/github/actions/workflow/status/ToxicantX/dsh-multi-model-orchestrator/test.yml?branch=main&label=tests)](https://github.com/ToxicantX/dsh-multi-model-orchestrator/actions/workflows/test.yml)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D22.19-339933?logo=nodedotjs&logoColor=white)](./package.json)
-[![DSH](https://img.shields.io/badge/dsh-0.1.7--rc.2-4c8bf5)](https://github.com/deepseek-ai/deepseek-harness)
+[![DSH](https://img.shields.io/badge/dsh-0.2.0--rc.1-4c8bf5)](https://github.com/deepseek-ai/deepseek-harness)
 
 [中文](#中文) | [English](#english)
 
@@ -38,7 +38,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 
 ### 环境要求
 
-- DeepSeek Harness 0.1.7-rc.2 或兼容的新版本
+- DeepSeek Harness 0.2.0-rc.1 或兼容的新版本
 - Node.js 22.19 或更高版本
 - DSH **设置 > 模型** 中至少有一个可用模型
 
@@ -140,7 +140,7 @@ The primary Agent acts as the product owner and engineering manager rather than 
 
 ### Requirements
 
-- DeepSeek Harness 0.1.7-rc.2 or a compatible newer release
+- DeepSeek Harness 0.2.0-rc.1 or a compatible newer release
 - Node.js 22.19 or newer
 - At least one model available in DSH **Settings > Models**
 
