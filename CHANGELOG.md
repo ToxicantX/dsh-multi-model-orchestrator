@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.7.15] - 2026-10-10
+
+### Changed
+
+- Expanded peerDependencies for `@deepseek-ai/dsh-system-prompt` and `@deepseek-ai/dsh-tool-subagent` to `^0.2.0-rc.1 || >=0.2.1-0` to cleanly support DSH 0.2.1-alpha.2 while retaining backward compatibility.
+
 ## [0.7.14] - 2026-09-29
 
 ### Changed
