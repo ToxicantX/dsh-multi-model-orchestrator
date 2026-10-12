@@ -7,7 +7,7 @@ import { Readable } from 'node:stream'
 import test from 'node:test'
 import packageJson from '../package.json' with { type: 'json' }
 import hostPlugin, { Config as HostConfig, ORCHESTRATOR_PRESET_NAME, ORCHESTRATOR_SETTINGS_ENDPOINT, ORCHESTRATOR_SETTINGS_NAMESPACE, AgentSettingsSchema, SettingsSchema, MultiModelOrchestratorSettings, apply as applyHost, hideLegacyPresetFromCatalog, inject as hostInject, settingsRoute } from '../host.js'
-import { DEFAULT_AGENT_DESCRIPTION, MAX_AGENT_COUNT, normalizeAgents } from '../src/config.js'
+import { DEFAULT_AGENT_DESCRIPTION, normalizeAgents } from '../src/config.js'
 import { install, parseArgs } from '../src/install.mjs'
 import { LEGACY_PRESET_ID, PRESET_MARKER, provisionLegacyPreset, provisionPreset } from '../src/preset.js'
 
@@ -81,7 +81,7 @@ test('installer copies exactly the fixed orchestrator preset and no agent data r
     assert.doesNotMatch(output, /^\s+(?:agents|provider|model|apiKey|baseURL):/gim)
     assert.doesNotMatch(output, /(?:API[_ ]?KEY|BASEURL|apiKey|baseURL|provider:|model:)/iu)
     assert.equal((output.match(/dsh-multi-model-orchestrator\/agent/gu) ?? []).length, 1)
-    assert.match(output, /Treat up to three configured development specialists as reusable specialist tools, not as a limit on children or tasks/)
+    assert.match(output, /Treat the configured development specialists as reusable specialist tools, not as a limit on children or tasks/)
     assert.match(output, /Act as the product\/project manager/)
     assert.match(output, /Own the outcome, acceptance criteria, decomposition, assignment, integration, and final acceptance/)
     assert.match(output, /Specialists own development/)
@@ -135,7 +135,7 @@ test('installer copies exactly the fixed orchestrator preset and no agent data r
     assert.doesNotMatch(output, /configured roster of up to three development specialists as available execution capacity/)
     assert.doesNotMatch(output, /different specialist for each concurrently executable scope/)
     assert.doesNotMatch(output, /up to the available specialist count/)
-    assert.doesNotMatch(output, /three-Agent limit/)
+    assert.doesNotMatch(output, /three-Agent limit|up to three configured development specialists|At most 3 specialists may be configured/)
     const primarySource = await readFile(new URL('../preset/agent.cordis.yml', import.meta.url), 'utf8')
     const legacySource = await readFile(new URL('../preset-legacy/agent.cordis.yml', import.meta.url), 'utf8')
     const persona = text => text.match(/^- id: persona[\s\S]*?(?=^- id: agent-instructions)/mu)?.[0]
@@ -357,12 +357,10 @@ test('normalizeAgents permits empty only with allowEmpty', () => {
   assert.equal(normalizeAgents([{ id: 'defaulted', provider: 'p', model: 'm' }])[0].persona, undefined)
   assert.equal(normalizeAgents([agent('custom', { persona: 'Use the dedicated child prompt.' })])[0].persona, 'Use the dedicated child prompt.')
   assert.throws(() => normalizeAgents([agent('solo', { reasoningEffort: 'high\nlow' })]), /Invalid newline.*reasoningEffort/)
-  assert.equal(MAX_AGENT_COUNT, 3)
-  const maximum = Array.from({ length: MAX_AGENT_COUNT }, (_, index) => agent('agent-' + index))
-  assert.equal(normalizeAgents(maximum, { allowEmpty: true }).length, 3)
-  const tooMany = [...maximum, agent('overflow')]
-  assert.throws(() => normalizeAgents(tooMany, { allowEmpty: true }), /must not contain more than 3 entries/)
-  assert.equal(normalizeAgents(tooMany, { allowEmpty: true, allowOverLimit: true }).length, 4)
+  const roster = Array.from({ length: 12 }, (_, index) => agent('agent-' + index))
+  assert.equal(normalizeAgents(roster, { allowEmpty: true }).length, 12)
+  assert.equal(normalizeAgents(roster).length, 12)
+  assert.equal(normalizeAgents([...roster, agent('overflow')]).length, 13)
 })
 
 test('normalizeAgents preserves internal line breaks in multiline descriptions', () => {
@@ -396,15 +394,15 @@ test('host exports a unique settings namespace and validates service snapshots',
   assert.deepEqual(fake.presentations[0], { presentation: { auto: false }, owner: fake.ctx.fiber })
 })
 
-test('host preserves an oversized legacy roster while activating only three Agents', async () => {
-  const legacy = Array.from({ length: MAX_AGENT_COUNT + 1 }, (_, index) => agent('legacy-' + index))
+test('host activates every configured Agent without truncating an oversized roster', async () => {
+  const legacy = Array.from({ length: 9 }, (_, index) => agent('legacy-' + index))
   const fake = settingsContext({ agents: legacy })
   const service = new MultiModelOrchestratorSettings(fake.ctx, fake.config)
 
   assert.deepEqual(service.configuredAgents(), legacy)
-  assert.deepEqual(service.currentAgents(), legacy.slice(0, MAX_AGENT_COUNT))
+  assert.deepEqual(service.currentAgents(), legacy)
   assert.deepEqual((await invokeSettingsRoute(service)).value.agents, legacy)
-  await assert.rejects(() => service.replaceAgents(legacy), /must not contain more than 3 entries/)
+  assert.deepEqual(await service.replaceAgents(legacy), legacy)
 })
 
 test('host endpoint replaces only validated Agent settings', async () => {
@@ -471,13 +469,13 @@ test('host settings route enforces origin, method, media type, shape, size, and 
   assert.equal((await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json', body: JSON.stringify({ agents: [], extra: true }) })).status, 400)
   assert.match((await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json', body: JSON.stringify({ agents: [], padding: 'x'.repeat(64 * 1024) }) })).value.error, /exceeds 64 KiB/)
 
-  const maximum = Array.from({ length: MAX_AGENT_COUNT }, (_, index) => agent('agent-' + index))
-  const accepted = await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json; charset=utf-8', body: JSON.stringify({ agents: maximum }) })
+  const roster = Array.from({ length: 6 }, (_, index) => agent('agent-' + index))
+  const accepted = await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json; charset=utf-8', body: JSON.stringify({ agents: roster }) })
   assert.equal(accepted.status, 200)
-  const tooMany = [...maximum, agent('overflow')]
-  const limited = await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json; charset=utf-8', body: JSON.stringify({ agents: tooMany }) })
-  assert.equal(limited.status, 400)
-  assert.match(limited.value.error, /must not contain more than 3 entries/)
+  assert.deepEqual(accepted.value.agents, roster)
+  const duplicate = await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json; charset=utf-8', body: JSON.stringify({ agents: [...roster, agent('agent-0')] }) })
+  assert.equal(duplicate.status, 400)
+  assert.match(duplicate.value.error, /Duplicate agent id/u)
 
   const replacement = agent('after', { id: ' after ' })
   const put = await invokeSettingsRoute(service, { method: 'PUT', contentType: 'application/json', body: JSON.stringify({ agents: [replacement] }) })

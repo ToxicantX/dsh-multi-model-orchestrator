@@ -17,7 +17,7 @@
 
 ### 项目介绍
 
-DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent 编排功能。你可以配置最多 3 个可复用的专业 Agent，为每个 Agent 选择 DSH 中已有的模型，并设置清晰的职责。这些 Agent 是可复用的 specialist 工具；child 任务的数量由有效工作和 runtime 容量决定，而不是由 Agent 列表数量决定。
+DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent 编排功能。你可以配置任意数量的可复用专业 Agent，为每个 Agent 选择 DSH 中已有的模型，并设置清晰的职责。这些 Agent 是可复用的 specialist 工具；child 任务的数量由有效工作和 runtime 容量决定，而不是由 Agent 列表数量决定。
 
 Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent 都会成为独立的子 Agent 工具，供主 Agent 按任务需要进行委派。
 
@@ -25,7 +25,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 
 ### 功能特性
 
-- 配置最多 3 个可复用的专业 Agent；每个工具可以服务多个 child 任务。
+- 配置任意数量的可复用的专业 Agent；每个工具可以服务多个 child 任务。
 - 直接选择 DSH 中已有的模型。
 - 为每个 Agent 设置固定 ID 和开发职责。
 - 从对应模型实际提供的等级中选择可选推理等级。
@@ -52,7 +52,7 @@ dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 
 安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会注册 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复，并从 Web 选择列表中隐藏使用官方显示名的兼容项。内容完全匹配官方旧版的无 marker preset 会被安全收编；经过自定义的用户 preset 不会被覆盖，改用不同名称时仍保持可见。
 
-升级时，已有的超过 3 个 Agent 的配置会被完整保留。运行时先启用前 3 个，设置页继续显示完整列表，并要求在下次保存前缩减到 3 个以内。
+升级时，已有配置会被完整保留，包括此前超过 3 个 Agent 的名册；所有已配置的 Agent 都会在启动时启用，设置页可继续增删。
 
 如果通过 DSH 源码仓库运行，请将命令中的 `dsh` 替换为 `pnpm dsh`。
 
@@ -119,7 +119,7 @@ pnpm dsh plugin --profile web add -w D:/path/to/dsh-multi-model-orchestrator
 
 ### Overview
 
-DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can configure up to 3 reusable specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility. These configured Agents are reusable specialist tools; the number of child tasks is determined by meaningful work and runtime capacity, not by the roster size.
+DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can configure any number of reusable specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility. These configured Agents are reusable specialist tools; the number of child tasks is determined by meaningful work and runtime capacity, not by the roster size.
 
 When a session uses the **Multi-model orchestrator** preset, every configured Agent becomes an independent subagent tool that the primary Agent can delegate work to.
 
@@ -127,7 +127,7 @@ The primary Agent acts as the product owner and engineering manager rather than 
 
 ### Features
 
-- Configure up to 3 reusable specialist Agents; reuse each tool across multiple child tasks.
+- Configure any number of reusable specialist Agents; reuse each tool across multiple child tasks.
 - Select models already available in DSH.
 - Give each Agent a stable ID, development scope, and child-Agent prompt.
 - Select an optional reasoning effort from the exact levels advertised by the Agent's model.
@@ -154,7 +154,7 @@ dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 
 Restart DSH Web after installation and refresh the browser. The plugin registers its Agent preset automatically when the Host starts. It also registers the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding official-name compatibility entries from Web selection lists. Exact official pre-marker copies are adopted safely; customized user-managed presets are never overwritten and remain visible when given a distinct name.
 
-Existing settings with more than 3 Agents are preserved during an upgrade. The first 3 remain active, the settings page continues to show the complete roster, and the next save requires reducing it to 3 or fewer.
+Existing settings are preserved during an upgrade, including rosters that previously exceeded 3 Agents. Every configured Agent is activated on startup, and the settings page keeps showing the complete roster for further edits.
 
 When running DSH from a source checkout, use `pnpm dsh` instead of `dsh` in the command.
 

@@ -1,7 +1,7 @@
 import { utimesSync } from 'node:fs'
 import { basename, dirname } from 'node:path'
 import z from '@deepseek-ai/schemastery'
-import { MAX_AGENT_COUNT, normalizeAgents } from './src/config.js'
+import { normalizeAgents } from './src/config.js'
 import { DEFAULT_PRESET_ID, LEGACY_PRESET_ID, provisionLegacyPreset, provisionPreset } from './src/preset.js'
 
 export const name = 'multi-model-orchestrator-settings'
@@ -67,11 +67,11 @@ export class MultiModelOrchestratorSettings {
   }
 
   configuredAgents() {
-    return normalizeAgents(this.agents.get(), { allowEmpty: true, allowOverLimit: true }).map(agent => ({ ...agent }))
+    return normalizeAgents(this.agents.get(), { allowEmpty: true }).map(agent => ({ ...agent }))
   }
 
   currentAgents() {
-    return this.configuredAgents().slice(0, MAX_AGENT_COUNT)
+    return this.configuredAgents()
   }
 
   async replaceAgents(agents) {

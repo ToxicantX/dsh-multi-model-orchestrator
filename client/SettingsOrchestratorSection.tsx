@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { MAX_AGENT_COUNT } from '../src/config.js'
 import {
   catalogOptions,
   cleanAgents,
@@ -148,7 +147,7 @@ export function SettingsOrchestratorSection({ models, t }: ClientContext) {
   }
 
   function add() {
-    setAgents(current => current.length >= MAX_AGENT_COUNT ? current : [...current, createAgentDraft()])
+    setAgents(current => [...current, createAgentDraft()])
     markChanged()
   }
 
@@ -198,11 +197,10 @@ export function SettingsOrchestratorSection({ models, t }: ClientContext) {
   return <div style={shell}>
     <div style={toolbar}>
       <h2 style={{ margin: 0, fontSize: 20 }}>{t('title')}</h2>
-      <button style={button} onClick={add} disabled={!writable || status === 'saving' || agents.length >= MAX_AGENT_COUNT} title={t('add')}>
+      <button style={button} onClick={add} disabled={!writable || status === 'saving'} title={t('add')}>
         <span aria-hidden="true">+</span> {t('add')}
       </button>
     </div>
-    {agents.length > MAX_AGENT_COUNT && <p role="status">{t('legacyAgentLimit')}</p>}
     {options.length === 0 && <p role="status">{t('noModels')}</p>}
     {agents.length === 0 && <p role="status">{t('empty')}</p>}
     <div style={list}>

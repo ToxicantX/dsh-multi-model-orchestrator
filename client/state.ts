@@ -1,4 +1,4 @@
-import { AGENT_ID, DEFAULT_AGENT_DESCRIPTION, DEFAULT_AGENT_PERSONA, MAX_AGENT_COUNT } from '../src/config.js'
+import { AGENT_ID, DEFAULT_AGENT_DESCRIPTION, DEFAULT_AGENT_PERSONA } from '../src/config.js'
 
 export const SETTINGS_NAMESPACE = 'multi-model-orchestrator'
 
@@ -104,10 +104,6 @@ function validationMessage(t: Translation | undefined, key: string, fallback: st
 }
 
 export function validateAgents(agents: readonly AgentInput[], options?: readonly CatalogOption[], t?: Translation): string | undefined {
-  if (agents.length > MAX_AGENT_COUNT) {
-    return validationMessage(t, 'agentCountExceeded', 'Agents must not exceed ' + MAX_AGENT_COUNT + '.')
-  }
-
   const ids = new Set<string>()
   for (const [index, agent] of agents.entries()) {
     const id = agent.id.trim()

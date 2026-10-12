@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { catalogOptions, cleanAgents, createAgentDraft, validateAgents, withRenderKey } from '../client/state.ts'
-import { DEFAULT_AGENT_DESCRIPTION, DEFAULT_AGENT_PERSONA, MAX_AGENT_COUNT } from '../src/config.js'
+import { DEFAULT_AGENT_DESCRIPTION, DEFAULT_AGENT_PERSONA } from '../src/config.js'
 
 const input = (id, overrides = {}) => ({ id, provider: 'p', model: 'm', description: '', ...overrides })
 
@@ -59,21 +59,23 @@ test('validates normalized IDs, models, reasoning, and token limits', () => {
   assert.match(validateAgents([input('a')], []), /no longer available/)
 })
 
-test('enforces the three-Agent cap at the exact boundaries', () => {
-  assert.equal(MAX_AGENT_COUNT, 3)
-  const maximum = Array.from({ length: MAX_AGENT_COUNT }, (_, index) => input('agent-' + index))
-  assert.equal(validateAgents(maximum), undefined)
-  assert.match(validateAgents([...maximum, input('overflow')]), /must not exceed 3/)
+test('accepts any number of validated Agents', () => {
+  const roster = Array.from({ length: 9 }, (_, index) => input('agent-' + index))
+  assert.equal(validateAgents(roster), undefined)
+  assert.match(validateAgents([...roster, input('agent-0')]), /unique/)
+  assert.match(validateAgents([...roster, input('Bad ID')]), /invalid ID/)
 })
 
-test('explains the active limit for an oversized legacy roster', async () => {
-  const [section, client] = await Promise.all([
+test('settings UI appends Agents without a roster cap', async () => {
+  const [section, client, config] = await Promise.all([
     readFile(new URL('../client/SettingsOrchestratorSection.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../client/index.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/config.js', import.meta.url), 'utf8'),
   ])
-  assert.match(section, /agents[.]length > MAX_AGENT_COUNT.*legacyAgentLimit/u)
-  assert.match(client, /Only the first 3 are active; remove the extras before saving[.]/u)
-  assert.match(client, /当前仅启用前 3 个；请删除多余 Agent 后保存。/u)
+  assert.match(section, /setAgents\(current => \[\.\.\.current, createAgentDraft\(\)\]\)/u)
+  assert.doesNotMatch(section, /MAX_AGENT_COUNT|legacyAgentLimit|agentCountExceeded/u)
+  assert.doesNotMatch(client, /legacyAgentLimit|agentCountExceeded|Only the first 3 are active|当前仅启用前 3 个/u)
+  assert.doesNotMatch(config, /value[.]length > MAX_AGENT_COUNT/u)
 })
 
 test('settings payload strips render keys and credential-like fields', async () => {

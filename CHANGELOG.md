@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-12
+
+### Changed
+
+- Removed the 3-Agent roster cap: every configured specialist is activated, the settings page can add any number of Agents, and the preset persona no longer describes a three-specialist roster.
+
 ## [0.7.15] - 2026-10-10
 
 ### Changed

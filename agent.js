@@ -21,7 +21,7 @@ export function roleGuidance(agents) {
     'Available specialists:',
     ...agents.map(agent => '- subagent_' + agent.id + ': ' + agent.description),
     '',
-    'You have ' + agents.length + ' configured development specialists. At most 3 specialists may be configured; treat them as reusable specialist tools, not as a limit on children or tasks.',
+    'You have ' + agents.length + ' configured development specialists. Treat them as reusable specialist tools, not as a limit on children or tasks.',
     'You are the product/project manager. Own the outcome, acceptance criteria, decomposition, assignment, integration, and final acceptance. Specialists own development.',
     'For non-trivial work, clarify outcomes and acceptance criteria before implementation. Decompose work by complexity into any number of meaningful, independently acceptable tasks. Avoid artificial or overly granular splits. Map each task to the best-fit available specialist.',
     'The same specialist tool may be called multiple times; create a distinct child session for each task. Dispatch independent tasks concurrently; runtime capacity, rather than specialist roster size, is the constraint. Do not keep a suitable specialist idle while you perform development. A specialist may remain idle only when no meaningful matching task exists or its work depends on unfinished results. Never invent work merely to use every specialist.',

@@ -1,5 +1,6 @@
 export const AGENT_ID = /^[a-z][a-z0-9_-]{0,47}$/u
-export const MAX_AGENT_COUNT = 3
+// Deprecated: the specialist roster is no longer capped. Kept as an export for compatibility.
+export const MAX_AGENT_COUNT = Number.POSITIVE_INFINITY
 export const DEFAULT_AGENT_DESCRIPTION = 'Implement and adjust the assigned code scope, add or update focused tests, inspect your diff, and run the checks that cover your changes before handoff. Report changed files, commands and results, risks, and blockers to the primary Agent; never claim completion when a required check fails.'
 export const DEFAULT_AGENT_PERSONA = 'Focus on the assigned scope, inspect relevant code before editing, make focused changes, run checks that cover them, and report changed files, commands, results, risks, and blockers. Do not claim completion when a required check fails.'
 
@@ -13,7 +14,6 @@ function requiredString(value, label, maxLength = 512, multiline = false) {
 
 export function normalizeAgents(value, options = {}) {
   if (!Array.isArray(value) || (!options.allowEmpty && value.length === 0)) throw new Error('agents must be a non-empty array')
-  if (!options.allowOverLimit && value.length > MAX_AGENT_COUNT) throw new Error('agents must not contain more than ' + MAX_AGENT_COUNT + ' entries')
   const ids = new Set()
   return value.map((entry, index) => {
     if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) throw new Error('agents[' + index + '] must be an object')

@@ -89,6 +89,16 @@ test('omits optional child request fields when they are not configured', async (
   assert.deepEqual(ctx.mounted[0].config.agentOptions, { provider: 'beta', model: 'model-b', maxTokens: 4096 })
 })
 
+test('mounts a subagent tool for every configured agent beyond the removed three-Agent cap', async () => {
+  const roster = Array.from({ length: 5 }, (_, index) => ({ id: 'agent-' + index, provider: 'p' + index, model: 'm' + index, description: 'Own scope ' + index + '.' }))
+  const ctx = agentContext(roster)
+  await apply(ctx)
+  assert.equal(ctx.mounted.length, 5)
+  assert.deepEqual(ctx.mounted.map(entry => entry.config.toolName), roster.map(agent => 'subagent_' + agent.id))
+  assert.match(ctx.sections[0].text, /You have 5 configured development specialists\. Treat them as reusable specialist tools, not as a limit on children or tasks\./)
+  assert.doesNotMatch(ctx.sections[0].text, /At most 3 specialists/)
+})
+
 test('empty service snapshot mounts no children and explains configuration state', async () => {
   const ctx = agentContext([])
   await apply(ctx)
@@ -102,8 +112,10 @@ test('role guidance uses available capacity without duplicating or inventing wor
   assert.match(text, /Available specialists:/)
   assert.match(text, /subagent_reviewer: Review independently/)
   assert.match(text, /You have 2 configured development specialists/)
-  assert.match(text, /At most 3 specialists may be configured/)
-  assert.match(text, /treat them as reusable specialist tools, not as a limit on children or tasks/)
+  assert.doesNotMatch(text, /At most 3 specialists may be configured/)
+  assert.match(text, /Treat them as reusable specialist tools, not as a limit on children or tasks/)
+  const twelve = Array.from({ length: 12 }, (_, index) => ({ ...agents[0], id: 'agent-' + index }))
+  assert.match(roleGuidance(twelve), /You have 12 configured development specialists\. Treat them as reusable specialist tools, not as a limit on children or tasks\./)
   assert.match(text, /product\/project manager/)
   assert.match(text, /Own the outcome, acceptance criteria, decomposition, assignment, integration, and final acceptance/)
   assert.match(text, /Specialists own development/)
