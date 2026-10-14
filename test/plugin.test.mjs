@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import * as ToolSubagent from '@deepseek-ai/dsh-tool-subagent'
 import agentPlugin, { Config, apply, inject, name, roleGuidance, specialistPersona } from '../agent.js'
 
 const agents = [
@@ -97,6 +98,32 @@ test('mounts a subagent tool for every configured agent beyond the removed three
   assert.deepEqual(ctx.mounted.map(entry => entry.config.toolName), roster.map(agent => 'subagent_' + agent.id))
   assert.match(ctx.sections[0].text, /You have 5 configured development specialists\. Treat them as reusable specialist tools, not as a limit on children or tasks\./)
   assert.doesNotMatch(ctx.sections[0].text, /At most 3 specialists/)
+})
+
+test('selects independent presets on runtimes that removed inline persona and backgroundMode', async () => {
+  const schema = ToolSubagent.Config.dict
+  const backgroundMode = schema.backgroundMode
+  schema.agentPreset = schema.toolName
+  delete schema.backgroundMode
+  try {
+    const ctx = agentContext()
+    const selected = []
+    ctx.multiModelOrchestrator.specialistPreset = async (agent, persona) => {
+      selected.push({ agent, persona })
+      return 'specialist-' + agent.id
+    }
+    await apply(ctx)
+    assert.deepEqual(ctx.mounted.map(entry => entry.config.agentPreset), ['specialist-architect', 'specialist-reviewer'])
+    assert.deepEqual(selected.map(entry => entry.persona), agents.map(specialistPersona))
+    for (const { config } of ctx.mounted) {
+      assert.equal(Object.hasOwn(config, 'persona'), false)
+      assert.equal(Object.hasOwn(config, 'backgroundMode'), false)
+      assert.equal(config.maxDepth, 1)
+    }
+  } finally {
+    delete schema.agentPreset
+    schema.backgroundMode = backgroundMode
+  }
 })
 
 test('empty service snapshot mounts no children and explains configuration state', async () => {

@@ -414,6 +414,25 @@ test('host endpoint replaces only validated Agent settings', async () => {
   await assert.rejects(() => service.replaceAgents([{ id: 'bad id', provider: 'p', model: 'm' }]), /Invalid agent id/)
 })
 
+test('specialist presets keep immutable prompts and share concurrent registrations', async () => {
+  const fake = settingsContext()
+  const registered = []
+  fake.ctx.agentPresets.register = async definition => {
+    registered.push(definition)
+    return () => {}
+  }
+  const service = new MultiModelOrchestratorSettings(fake.ctx, fake.config)
+  const [first, again] = await Promise.all([
+    service.specialistPreset(agent('solo'), 'Original persona'),
+    service.specialistPreset(agent('solo'), 'Original persona'),
+  ])
+  assert.equal(first, again)
+  assert.equal(registered.length, 1)
+  assert.notEqual(await service.specialistPreset(agent('solo'), 'Updated persona'), first)
+  assert.equal(registered[0].plugins[0].config.specialistPersona, 'Original persona')
+  assert.equal(registered[1].plugins[0].config.specialistPersona, 'Updated persona')
+})
+
 test('host catalog hides only the managed legacy alias and restores the service', async () => {
   const response = {
     presets: [
@@ -421,15 +440,16 @@ test('host catalog hides only the managed legacy alias and restores the service'
       { id: 'multi-model-orchestrator', name: ORCHESTRATOR_PRESET_NAME },
       { id: LEGACY_PRESET_ID, name: ORCHESTRATOR_PRESET_NAME },
       { id: LEGACY_PRESET_ID, name: 'User preset' },
+      { id: 'internal-specialist', name: 'Orchestrator specialist: solo' },
     ],
     authorable: true,
   }
   const originalList = async () => response
   const agentPresets = { remoteExportList: originalList }
-  const restore = hideLegacyPresetFromCatalog(agentPresets)
+  const restore = hideLegacyPresetFromCatalog(agentPresets, new Map([['internal-specialist', Promise.resolve()]]))
   const filtered = await agentPresets.remoteExportList()
   assert.deepEqual(filtered.presets.map(preset => preset.name ?? preset.id), ['standard', ORCHESTRATOR_PRESET_NAME, 'User preset'])
-  assert.equal(response.presets.length, 4)
+  assert.equal(response.presets.length, 5)
   restore()
   assert.equal(agentPresets.remoteExportList, originalList)
 })

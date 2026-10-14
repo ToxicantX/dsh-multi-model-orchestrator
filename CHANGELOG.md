@@ -4,6 +4,13 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-10-15
+
+### Fixed
+
+- Support DSH 0.2.1-alpha.3 subagents by selecting independent specialist Agent Presets instead of passing the removed inline persona option. Preserve existing specialist settings and compatibility with older runtimes.
+- Exercise non-empty specialist rosters and actual session creation in the real Runtime smoke test.
+
 ## [0.8.0] - 2026-10-12
 
 ### Changed
@@ -181,7 +188,8 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.14...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.8.0...v0.8.1
 [0.7.14]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.13...v0.7.14
 [0.7.13]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.12...v0.7.13
 [0.7.12]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.11...v0.7.12

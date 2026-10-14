@@ -48,19 +48,21 @@ export async function apply(ctx) {
     text: roleGuidance(snapshot),
   }), 'multi-model-orchestrator.roles')
 
-  const children = snapshot.map(agent => ctx.plugin(ToolSubagent, {
+  const children = await Promise.all(snapshot.map(async agent => ctx.plugin(ToolSubagent, {
     provider: 'spawn',
     toolName: 'subagent_' + agent.id,
-    backgroundMode: 'continuable',
+    ...(ToolSubagent.Config.dict.backgroundMode === undefined ? {} : { backgroundMode: 'continuable' }),
     agentOptions: {
       provider: agent.provider,
       model: agent.model,
       ...(agent.reasoningEffort === undefined ? {} : { reasoningEffort: agent.reasoningEffort }),
       ...(agent.maxTokens === undefined ? {} : { maxTokens: agent.maxTokens }),
     },
-    persona: specialistPersona(agent),
+    ...(ToolSubagent.Config.dict.agentPreset === undefined
+      ? { persona: specialistPersona(agent) }
+      : { agentPreset: await ctx.multiModelOrchestrator.specialistPreset(agent, specialistPersona(agent)) }),
     maxDepth: 1,
-  }))
+  })))
   await Promise.all(children.map(child => child.await()))
 }
 

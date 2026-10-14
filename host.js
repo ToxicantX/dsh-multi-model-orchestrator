@@ -1,4 +1,5 @@
 import { utimesSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { basename, dirname } from 'node:path'
 import z from '@deepseek-ai/schemastery'
 import { normalizeAgents } from './src/config.js'
@@ -50,6 +51,7 @@ export class MultiModelOrchestratorSettings {
   constructor(ctx, config) {
     this.ctx = ctx
     this.agents = config.agents
+    this.specialistPresets = new Map()
     const refreshGeneration = () => {
       if (config.presetPath === undefined) return
       try {
@@ -72,6 +74,32 @@ export class MultiModelOrchestratorSettings {
 
   currentAgents() {
     return this.configuredAgents()
+  }
+
+  specialistPreset(agent, persona) {
+    // Keep existing sessions on their original prompt when specialist settings change.
+    const revision = createHash('sha256').update(persona).digest('hex')
+    const id = 'multi-model-specialist-' + agent.id + '-' + revision
+    if (!this.specialistPresets.has(id)) {
+      const registration = this.ctx.agentPresets.register({
+        id,
+        name: 'Orchestrator specialist: ' + agent.id,
+        description: agent.description,
+        plugins: [{
+          id: 'specialist-composition',
+          name: 'dsh-multi-model-orchestrator/preset-loader',
+          config: { specialistPersona: persona },
+        }],
+      }).then(dispose => {
+        this.ctx.effect(() => dispose)
+        return id
+      }).catch(error => {
+        this.specialistPresets.delete(id)
+        throw error
+      })
+      this.specialistPresets.set(id, registration)
+    }
+    return this.specialistPresets.get(id)
   }
 
   async replaceAgents(agents) {
@@ -107,13 +135,13 @@ export function settingsRoute(service) {
   }
 }
 
-export function hideLegacyPresetFromCatalog(agentPresets) {
+export function hideLegacyPresetFromCatalog(agentPresets, specialistPresets = new Map()) {
   const originalList = agentPresets.remoteExportList
   const filteredList = async function () {
     const response = await originalList.call(this)
     return {
       ...response,
-      presets: response.presets.filter(preset => !(
+      presets: response.presets.filter(preset => !specialistPresets.has(preset.id) && !(
         preset.id === LEGACY_PRESET_ID && preset.name === ORCHESTRATOR_PRESET_NAME
       )),
     }
@@ -152,8 +180,8 @@ export function apply(ctx, config) {
     provisionPreset({ target })
     if (basename(target) === DEFAULT_PRESET_ID) provisionLegacyPreset({ primaryTarget: target })
   }
-  ctx.effect(() => hideLegacyPresetFromCatalog(ctx.agentPresets))
   const service = new MultiModelOrchestratorSettings(ctx, config)
+  ctx.effect(() => hideLegacyPresetFromCatalog(ctx.agentPresets, service.specialistPresets))
   ctx.provide('multiModelOrchestrator', service)
   ctx.effect(() => ctx.webServer.register(settingsRoute(service)))
 }

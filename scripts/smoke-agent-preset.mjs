@@ -1,15 +1,18 @@
-import { mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { cp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { mkdtemp } from 'node:fs/promises'
 import { spawn, execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { setTimeout as delay } from 'node:timers/promises'
 
 import { provisionLegacyPreset, provisionPreset } from '../src/preset.js'
+import { specialistPersona } from '../agent.js'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const dshBin = join(repoRoot, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
+const runtimeRoot = process.env.DSH_SMOKE_RUNTIME
+const dshBin = join(runtimeRoot ?? join(repoRoot, 'node_modules', '@deepseek-ai', 'dsh'), 'lib', 'bin.js')
 const timeoutMs = 90_000
 
 function assert(condition, message) {
@@ -81,22 +84,41 @@ async function main() {
   const home = await mkdtemp(join(process.env.TEMP ?? process.env.TMP ?? homedir(), 'dsh-agent-preset-smoke-'))
   let child
   const logs = []
+  const agents = Array.from({ length: 5 }, (_, index) => ({
+    id: `smoke-${index}`,
+    provider: 'smoke-provider',
+    model: `smoke-model-${index}`,
+    description: `Own smoke scope ${index}.`,
+    persona: `Specialist ${index} acceptance prompt.`,
+  }))
   try {
     provisionPreset({ target: join(home, '.agent-presets', 'multi-model-orchestrator') })
     provisionLegacyPreset({ primaryTarget: join(home, '.agent-presets', 'multi-model-orchestrator') })
 
     const profile = join(home, 'profiles', 'web')
+    let pluginRoot = repoRoot
+    if (runtimeRoot !== undefined) {
+      pluginRoot = join(home, 'plugin')
+      const manifest = JSON.parse(await readFile(join(repoRoot, 'package.json'), 'utf8'))
+      await mkdir(pluginRoot, { recursive: true })
+      for (const file of manifest.files) await cp(join(repoRoot, file), join(pluginRoot, file), { recursive: true })
+      for (const dependency of Object.keys(manifest.peerDependencies)) {
+        const target = join(pluginRoot, 'node_modules', dependency)
+        await mkdir(dirname(target), { recursive: true })
+        await symlink(join(runtimeRoot, 'node_modules', dependency), target, 'junction')
+      }
+    }
     execFileSync(process.execPath, [dshBin, '--profile', 'web', '--dump-default-config'], {
       cwd: repoRoot,
       env: { ...process.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1' },
       stdio: 'ignore'
     })
     const profilePackage = JSON.parse(await readFile(join(profile, 'package.json'), 'utf8'))
-    profilePackage.dependencies = { 'dsh-multi-model-orchestrator': `link:${repoRoot}` }
+    profilePackage.dependencies = { 'dsh-multi-model-orchestrator': `link:${pluginRoot}` }
     await writeFile(join(profile, 'package.json'), JSON.stringify(profilePackage, null, 2) + '\n')
     await mkdir(join(profile, 'node_modules'), { recursive: true })
-    await symlink(repoRoot, join(profile, 'node_modules', 'dsh-multi-model-orchestrator'), 'junction')
-    const pluginPatch = await readFile(join(repoRoot, 'cordis.patch.yml'), 'utf8')
+    await symlink(pluginRoot, join(profile, 'node_modules', 'dsh-multi-model-orchestrator'), 'junction')
+    const pluginPatch = (await readFile(join(repoRoot, 'cordis.patch.yml'), 'utf8')).replace('agents: []', `agents: ${JSON.stringify(agents)}`)
     await writeFile(join(profile, 'cordis.patch.yml'), `- id: agent-preset-registry\n  config:\n    default: standard\n${pluginPatch}`)
 
     child = spawn(process.execPath, [dshBin, '--profile', 'web', '--port', '0', '--no-open'], {
@@ -112,6 +134,9 @@ async function main() {
     assert(settingsResponse.status === 200, `plugin settings route unavailable: HTTP ${settingsResponse.status}`)
     const settings = await settingsResponse.json()
     assert(Array.isArray(settings.agents), `plugin settings response is invalid: ${JSON.stringify(settings)}`)
+    assert(settings.agents.length === agents.length && settings.agents.every((agent, index) =>
+      agent.id === agents[index].id && agent.model === agents[index].model && agent.persona === agents[index].persona
+    ), 'configured specialist models or prompts were not preserved')
     const settingsUpdateResponse = await fetch(`${new URL(url).origin}/plugins/dsh-multi-model-orchestrator/settings`, {
       method: 'PUT',
       headers: {
@@ -119,7 +144,7 @@ async function main() {
         Origin: new URL(url).origin,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(settings)
+      body: JSON.stringify({ agents })
     })
     assert(settingsUpdateResponse.status === 200, `plugin settings update failed: HTTP ${settingsUpdateResponse.status}`)
     const roster = await rpc(url, cookie, 'agentPresets/list', {})
@@ -127,6 +152,17 @@ async function main() {
     assert(roster.presets.every((preset) => preset.id !== 'orchestrator'), `managed legacy preset leaked into catalog: ${JSON.stringify(roster)}`)
     const primary = roster.presets.find((preset) => preset.id === 'multi-model-orchestrator')
     assert(primary.broken === undefined, `primary preset failed to activate: ${JSON.stringify(primary)}`)
+    assert(roster.presets.every(preset => !preset.id.startsWith('multi-model-specialist-')), 'internal specialists leaked into the preset picker')
+    const session = await rpc(url, cookie, 'session/create', { request: { cwd: repoRoot, agentPreset: 'multi-model-orchestrator' } })
+    assert(typeof session.sessionId === 'string', `session creation failed: ${JSON.stringify(session)}`)
+    const second = await rpc(url, cookie, 'session/create', { request: { cwd: repoRoot, agentPreset: 'multi-model-orchestrator' } })
+    assert(second.sessionId !== session.sessionId, 'separate sessions must not share an identity')
+    if (runtimeRoot !== undefined) {
+      const revision = createHash('sha256').update(specialistPersona(agents[0])).digest('hex')
+      const childPreset = `multi-model-specialist-${agents[0].id}-${revision}`
+      const specialist = await rpc(url, cookie, 'session/create', { request: { cwd: repoRoot, agentPreset: childPreset } })
+      assert(typeof specialist.sessionId === 'string', 'specialist preset could not create its own session')
+    }
     console.log('agent preset smoke test passed')
   } catch (error) {
     const detail = error instanceof Error ? error.stack ?? error.message : String(error)

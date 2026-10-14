@@ -3,6 +3,7 @@ import z from '@deepseek-ai/schemastery'
 
 export const Config = z.object({
   legacy: z.boolean().default(false),
+  specialistPersona: z.string(),
 })
 
 export default class OrchestratorPresetInclude extends Include {
@@ -11,7 +12,13 @@ export default class OrchestratorPresetInclude extends Include {
   constructor(ctx, config) {
     const baseUrl = ctx.baseUrl
     const relativePath = config.legacy ? './preset-legacy/agent.cordis.yml' : './preset/agent.cordis.yml'
-    super(ctx, { path: new URL(relativePath, import.meta.url).href })
+    super(ctx, {
+      path: new URL(relativePath, import.meta.url).href,
+      ...(config.specialistPersona === undefined ? {} : { patches: [
+        { id: 'persona', config: { prefix: config.specialistPersona } },
+        { id: 'delegation', disabled: true },
+      ] }),
+    })
     // Resolve child DSH plugins from the declaring bundle, not this package's peer graph.
     this.ctx.baseUrl = baseUrl
   }
