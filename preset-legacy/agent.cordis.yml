@@ -1,7 +1,7 @@
 # Generic multi-model orchestrator preset based on DSH Code Mode.
 #
-# Everything in `standard` is here unchanged. What is added is the `tool-presentation`
-# row: instead of one tool call per action, the model writes a TypeScript
+# Standard context and tools are retained alongside specialist orchestration.
+# The added `tool-presentation` row lets the model write a TypeScript
 # program against a generated SDK and `run_code` executes it, so a sequence
 # that would be five round trips becomes one.
 #
@@ -31,7 +31,7 @@
   name: '@deepseek-ai/dsh-persona'
   config:
     prefix: |-
-      You are the primary coding orchestrator powered by the {{model}} model. Your working directory is {{cwd}}.
+      You are the primary coding orchestrator powered by the {{model}} model.
 
       Treat the configured development specialists as reusable specialist tools, not as a limit on children or tasks.
 
@@ -65,10 +65,14 @@
       Specialists stop after two occurrences of the same tool or execution-protocol error. Switch to the simplest valid alternative tool call or report the blocker, and avoid repeated calls that fail or produce no useful output.
 
       After all relevant children return, review, integrate, and run final acceptance checks. Do not finalize while a required child is running, lacks a foreground result, or lacks its background settlement notice; an interrupted or failed child leaves the task incomplete and requires a blocker report or a re-planned attempt. Handle a trivial one-step change entirely yourself. When no specialists are configured, do the work yourself.
+    suffix: !!js "ctx.get('workingDirectory') === undefined ? 'Your working directory is {{cwd}}.' : ''"
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
   config:
     maxBytes: 65536
+
+- id: time-context
+  name: '@deepseek-ai/dsh-time-context'
 
 
 # ── shell ───────────────────────────────────────────────────────────────────
@@ -112,6 +116,11 @@
 - id: tool-jobs
   name: '@deepseek-ai/dsh-tool-jobs'
 
+# Older runtimes have no schedule service or tool package.
+- id: tool-schedule
+  name: '@deepseek-ai/dsh-tool-schedule'
+  disabled: true
+
 # ── skills ──────────────────────────────────────────────────────────────────
 
 # The skill REGISTRY lives in the host composition and is layered per scope:
@@ -150,7 +159,7 @@
       name: '@deepseek-ai/dsh-plan-mode'
       config:
         section: |
-              You are in plan mode. Stay in plan mode until exit_plan_mode succeeds or the user switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
+              You are in plan mode. Stay in plan mode until the user approves your plan through exit_plan_mode or switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
 
               Explore first. Use non-mutating reads, searches, static analysis, and checks to ground the plan in the actual repository. Do not edit or write files, change configuration, run formatters or code generation that rewrites tracked files, commit, or otherwise carry out the plan. Prefer existing functions and patterns over new machinery.
 
@@ -236,6 +245,9 @@
   config:
     fetch: true
     searchTimeoutMs: 60000
+
+- id: present
+  name: '@deepseek-ai/dsh-tool-present'
 
 # ── presentation ────────────────────────────────────────────────────────────
 

@@ -10,6 +10,7 @@ export const inject = ['settings', 'webServer', 'agentPresets']
 export const ORCHESTRATOR_SETTINGS_NAMESPACE = 'multi-model-orchestrator'
 export const ORCHESTRATOR_SETTINGS_ENDPOINT = '/plugins/dsh-multi-model-orchestrator/settings'
 export const ORCHESTRATOR_PRESET_NAME = 'Multi-model orchestrator'
+const BACKUP_PRESET_ID = /^(?:multi-model-orchestrator|orchestrator)\.desktop-(?:backup|uninstalled)-[a-z0-9]+-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/u
 
 export const AgentSettingsSchema = z.object({
   id: z.string().required(),
@@ -142,7 +143,7 @@ export function hideLegacyPresetFromCatalog(agentPresets, specialistPresets = ne
     return {
       ...response,
       presets: response.presets.filter(preset => !specialistPresets.has(preset.id) && !(
-        preset.id === LEGACY_PRESET_ID && preset.name === ORCHESTRATOR_PRESET_NAME
+        preset.name === ORCHESTRATOR_PRESET_NAME && (preset.id === LEGACY_PRESET_ID || BACKUP_PRESET_ID.test(preset.id))
       )),
     }
   }

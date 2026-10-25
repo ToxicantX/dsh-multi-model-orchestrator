@@ -35,6 +35,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 - 按复杂度将非简单工作拆分为任意数量有意义、互不重叠且可独立验收的任务，避免人为制造或过度微拆。
 - 每个独立任务创建新的 child，即使多个任务匹配同一 specialist；独立任务可在 runtime 容量内并发，文件、所有权或依赖交叉的任务串行。
 - 运行中的 Session 保持启动时的 Agent 配置。
+- 保留标准模式的项目指令、Skills、时间上下文、计划审批和结果展示；定时任务在 Runtime 提供对应插件时可用。
 
 ### 环境要求
 
@@ -50,7 +51,7 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 ~~~
 
-安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会注册 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复，并从 Web 选择列表中隐藏使用官方显示名的兼容项。内容完全匹配官方旧版的无 marker preset 会被安全收编；经过自定义的用户 preset 不会被覆盖，改用不同名称时仍保持可见。
+安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会注册 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复，并从 Web 选择列表中隐藏使用官方显示名的兼容项和 Desktop 自动生成的升级、卸载备份。备份文件与历史 ID 保留。内容完全匹配官方旧版的无 marker preset 会被安全收编；经过自定义的用户 preset 不会被覆盖，改用不同名称时仍保持可见。
 
 升级时，已有配置会被完整保留，包括此前超过 3 个 Agent 的名册；所有已配置的 Agent 都会在启动时启用，设置页可继续增删。
 
@@ -137,6 +138,7 @@ The primary Agent acts as the product owner and engineering manager rather than 
 - Split non-trivial work by complexity into any number of meaningful, non-overlapping tasks with independent acceptance targets, while avoiding artificial or overly granular splits.
 - Create a new child for each independent task, including when multiple tasks use the same specialist; run independent tasks concurrently within runtime capacity and serialize file, ownership, or dependency overlaps.
 - Keep each running session on the Agent configuration it started with.
+- Retain standard project instructions, Skills, time context, plan approval, and result presentation; reminders are available when the Runtime provides the corresponding plugin.
 
 ### Requirements
 
@@ -152,7 +154,7 @@ Install the plugin in the DSH Web profile:
 dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 ~~~
 
-Restart DSH Web after installation and refresh the browser. The plugin registers its Agent preset automatically when the Host starts. It also registers the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding official-name compatibility entries from Web selection lists. Exact official pre-marker copies are adopted safely; customized user-managed presets are never overwritten and remain visible when given a distinct name.
+Restart DSH Web after installation and refresh the browser. The plugin registers its Agent preset automatically when the Host starts. It also registers the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding official-name compatibility entries and generated Desktop upgrade or uninstall backups from Web selection lists. Backup files and historical identities are retained. Exact official pre-marker copies are adopted safely; customized user-managed presets are never overwritten and remain visible when given a distinct name.
 
 Existing settings are preserved during an upgrade, including rosters that previously exceeded 3 Agents. Every configured Agent is activated on startup, and the settings page keeps showing the complete roster for further edits.
 

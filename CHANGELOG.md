@@ -4,6 +4,15 @@ All notable changes to this project are documented here. This project follows [K
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-10-25
+
+### Fixed
+
+- Hide generated Desktop upgrade and uninstall backup presets from the mode picker while retaining their identities for existing sessions and preserving custom presets.
+- Align the orchestrator presets with standard time context, result presentation, reminder tools, and plan approval guidance while preserving specialist routing and coordination.
+- Use the Runtime's working-directory context on newer versions, retaining the persona suffix only for older runtimes that still provide the `cwd` prompt variable.
+- Verify assembled model requests for project instructions, Skills, time, plan mode, and specialist personas in the real Runtime smoke test.
+
 ## [0.8.1] - 2026-10-15
 
 ### Fixed

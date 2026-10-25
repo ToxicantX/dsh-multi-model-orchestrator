@@ -473,6 +473,33 @@ test('host catalog filtering also patches a prototype service method', async () 
   assert.equal(servicePrototype.remoteExportList, originalList)
 })
 
+test('host catalog hides generated upgrade backups without hiding custom namesakes', async () => {
+  const suffix = 'mt2vuo26-86131799-1d2a-468b-862d-5abf932b4a89'
+  const backups = [
+    'multi-model-orchestrator.desktop-backup-' + suffix,
+    'orchestrator.desktop-backup-' + suffix,
+    'multi-model-orchestrator.desktop-uninstalled-' + suffix,
+  ]
+  const response = {
+    presets: [
+      { id: 'multi-model-orchestrator', name: ORCHESTRATOR_PRESET_NAME, isDefault: true },
+      ...backups.map(id => ({ id, name: ORCHESTRATOR_PRESET_NAME })),
+      { id: 'my-orchestrator', name: ORCHESTRATOR_PRESET_NAME },
+      { id: 'multi-model-orchestrator.desktop-backup-custom', name: ORCHESTRATOR_PRESET_NAME },
+      { id: 'orchestrator.desktop-backup-' + suffix, name: 'My saved preset' },
+    ],
+  }
+  const originalList = async () => response
+  const agentPresets = { remoteExportList: originalList }
+  const restore = hideLegacyPresetFromCatalog(agentPresets)
+  try {
+    const filtered = await agentPresets.remoteExportList()
+    assert.deepEqual(filtered.presets, [response.presets[0], ...response.presets.slice(4)])
+    assert.equal(response.presets.length, 7)
+  } finally { restore() }
+  assert.equal(agentPresets.remoteExportList, originalList)
+})
+
 test('host settings route enforces origin, method, media type, shape, size, and normalization', async () => {
   const fake = settingsContext({ agents: [agent('before')] })
   const service = new MultiModelOrchestratorSettings(fake.ctx, fake.config)
