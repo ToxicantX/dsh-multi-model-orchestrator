@@ -2,7 +2,11 @@
 
 All notable changes to this project are documented here. This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.8.3] - 2026-10-28
+
+### Fixed
+
+- Removed obsolete `@deepseek-ai/dsh-tool-subagent-control/list-agents` preset declaration following DSH subagent control consolidation in DSH 0.2.1/0.2.2.
 
 ## [0.8.2] - 2026-10-25
 
@@ -197,7 +201,9 @@ All notable changes to this project are documented here. This project follows [K
 - Protected against aborted or stale requests.
 - Protected dirty pages from unsafe navigation or replacement.
 
-[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.8.3...HEAD
+[0.8.3]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.8.2...v0.8.3
+[0.8.2]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.8.0...v0.8.1
 [0.7.14]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.13...v0.7.14
 [0.7.13]: https://github.com/ToxicantX/dsh-multi-model-orchestrator/compare/v0.7.12...v0.7.13
