@@ -6,7 +6,7 @@ All notable changes to this project are documented here. This project follows [K
 
 ### Fixed
 
-- Removed obsolete `@deepseek-ai/dsh-tool-subagent-control/list-agents` preset declaration following DSH subagent control consolidation in DSH 0.2.1/0.2.2.
+- Add bidirectional runtime compatibility for subagent control: preserve `tool-subagent-list-agents` for older DSH runtimes (< 0.2.1) where discovery tools are separately exported, while dynamically disabling it on newer runtimes (>= 0.2.1) where control tools are consolidated into `@deepseek-ai/dsh-tool-subagent-control`.
 
 ## [0.8.2] - 2026-10-25
 

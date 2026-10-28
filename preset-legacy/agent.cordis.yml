@@ -221,6 +221,10 @@
   config:
     - id: tool-subagent-control
       name: '@deepseek-ai/dsh-tool-subagent-control'
+    # Preserved for backward compatibility with older DSH runtimes (< 0.2.1).
+    - id: tool-subagent-list-agents
+      name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+      disabled: true
 
     - id: multi-model-orchestrator
       name: 'dsh-multi-model-orchestrator/agent'

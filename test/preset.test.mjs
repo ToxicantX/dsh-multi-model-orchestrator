@@ -15,6 +15,7 @@ for (const directory of ['preset', 'preset-legacy']) {
       assert.ok(entries.some(entry => entry.name === '@deepseek-ai/' + plugin && entry.disabled !== true), 'missing ' + plugin)
     }
     assert.match(source, /name: '@deepseek-ai\/dsh-tool-schedule'\r?\n\s+disabled: true/u)
+    assert.match(source, /name: '@deepseek-ai\/dsh-tool-subagent-control\/list-agents'\r?\n\s+disabled: true/u)
     assert.match(source, /powered by the \{\{model\}\} model/u)
     const persona = entries.find(entry => entry.id === 'persona').config
     assert.doesNotMatch(persona.prefix, /\{\{cwd\}\}/u)
@@ -41,4 +42,22 @@ test('optional schedule loading preserves old runtimes and surfaces broken depen
   assert.equal(schedule.disabled, true)
   state.import = async () => { throw Object.assign(new Error("Cannot find package 'broken-dependency' imported from /node_modules/@deepseek-ai/dsh-tool-schedule/lib/index.js"), { code: 'ERR_MODULE_NOT_FOUND' }) }
   await assert.rejects(() => OrchestratorPresetInclude.prototype.read.call(state), /broken-dependency/u)
+})
+test('optional list-agents loading preserves old runtimes and disables on consolidated runtimes', async t => {
+  t.mock.method(Include.prototype, 'read', async () => true)
+  const listAgents = { id: 'tool-subagent-list-agents', name: '@deepseek-ai/dsh-tool-subagent-control/list-agents', disabled: true }
+  const delegation = { id: 'delegation', group: true, config: [listAgents] }
+  const state = { data: [delegation], import: async () => ({}) }
+  assert.equal(await OrchestratorPresetInclude.prototype.read.call(state), true)
+  assert.equal(listAgents.disabled, false)
+  listAgents.disabled = true
+  state.import = async () => { throw Object.assign(new Error("Package subpath './list-agents' is not defined"), { code: 'ERR_PACKAGE_PATH_NOT_EXPORTED' }) }
+  await OrchestratorPresetInclude.prototype.read.call(state)
+  assert.equal(listAgents.disabled, true)
+  listAgents.disabled = false
+  await OrchestratorPresetInclude.prototype.read.call(state)
+  assert.equal(listAgents.disabled, true)
+  state.import = async () => { throw Object.assign(new Error("Cannot find package '@deepseek-ai/dsh-tool-subagent-control'"), { code: 'ERR_MODULE_NOT_FOUND' }) }
+  await OrchestratorPresetInclude.prototype.read.call(state)
+  assert.equal(listAgents.disabled, true)
 })

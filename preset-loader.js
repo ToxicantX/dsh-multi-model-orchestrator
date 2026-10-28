@@ -6,6 +6,17 @@ export const Config = z.object({
   specialistPersona: z.string(),
 })
 
+function findEntry(entries, id) {
+  if (!Array.isArray(entries)) return undefined
+  for (const entry of entries) {
+    if (entry?.id === id) return entry
+    if (entry?.group && Array.isArray(entry.config)) {
+      const found = findEntry(entry.config, id)
+      if (found !== undefined) return found
+    }
+  }
+  return undefined
+}
 export default class OrchestratorPresetInclude extends Include {
   static Config = Config
 
@@ -33,6 +44,18 @@ export default class OrchestratorPresetInclude extends Include {
           schedule.disabled = false
         } catch (error) {
           if (!['ERR_MODULE_NOT_FOUND', 'MODULE_NOT_FOUND'].includes(error.code) || !error.message.includes("'" + schedule.name + "'")) throw error
+        }
+      }
+
+      const listAgents = findEntry(this.data, 'tool-subagent-list-agents')
+      if (listAgents !== undefined) {
+        try {
+          await this.import(listAgents.name)
+          listAgents.disabled = false
+        } catch (error) {
+          const expectedErrors = ['ERR_MODULE_NOT_FOUND', 'MODULE_NOT_FOUND', 'ERR_PACKAGE_PATH_NOT_EXPORTED']
+          if (!expectedErrors.includes(error.code)) throw error
+          listAgents.disabled = true
         }
       }
     }
