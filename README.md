@@ -19,7 +19,7 @@
 
 DSH Multi-model Orchestrator 为 DeepSeek Harness Web 设置页增加了 Agent 编排功能。你可以配置任意数量的可复用专业 Agent，为每个 Agent 选择 DSH 中已有的模型，并设置清晰的职责。这些 Agent 是可复用的 specialist 工具；child 任务的数量由有效工作和 runtime 容量决定，而不是由 Agent 列表数量决定。
 
-Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent 都会成为独立的子 Agent 工具，供主 Agent 按任务需要进行委派。
+Session 使用 **Multi-model orchestrator** 预设后，每个已启用的 Agent 都会成为独立的子 Agent 工具，供主 Agent 按任务需要进行委派。禁用 Agent 会保留其模型和提示词配置，但不参与新会话的委派。
 
 主 Agent 的定位是产品负责人和工程项目经理，而不是默认开发者。面对非简单工作，它先明确目标与验收标准，拆分互不重叠的范围，并在实施开始前委派开发、调查、测试和审查。每个 child 在返回前独占一个内聚任务和验收目标；主 Agent 只协调不重叠工作、等待依赖、集成返回结果并执行最终验收。真正的一步小改仍可直接完成。
 
@@ -35,6 +35,8 @@ Session 使用 **Multi-model orchestrator** 预设后，每个已配置的 Agent
 - 按复杂度将非简单工作拆分为任意数量有意义、互不重叠且可独立验收的任务，避免人为制造或过度微拆。
 - 每个独立任务创建新的 child，即使多个任务匹配同一 specialist；独立任务可在 runtime 容量内并发，文件、所有权或依赖交叉的任务串行。
 - 运行中的 Session 保持启动时的 Agent 配置。
+- 每个 Agent 可独立启用或禁用，旧配置默认启用。
+- 配置条目可展开或收起；收起时仍可查看模型、切换启用状态和删除，多条目列表可滚动。
 - 保留标准模式的项目指令、Skills、时间上下文、计划审批和结果展示；定时任务在 Runtime 提供对应插件时可用。
 
 ### 环境要求
@@ -53,7 +55,7 @@ dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 
 安装完成后重启 DSH Web，并刷新浏览器。Host 启动时，插件会注册 Agent 预设，同时创建旧版 `orchestrator` 兼容 ID，使使用该 ID 的已有 Session 可以恢复，并从 Web 选择列表中隐藏使用官方显示名的兼容项和 Desktop 自动生成的升级、卸载备份。备份文件与历史 ID 保留。内容完全匹配官方旧版的无 marker preset 会被安全收编；经过自定义的用户 preset 不会被覆盖，改用不同名称时仍保持可见。
 
-升级时，已有配置会被完整保留，包括此前超过 3 个 Agent 的名册；所有已配置的 Agent 都会在启动时启用，设置页可继续增删。
+升级时，已有配置会被完整保留，包括此前超过 3 个 Agent 的名册；未设置启用状态的旧 Agent 默认启用，设置页可继续增删、启用或禁用。
 
 如果通过 DSH 源码仓库运行，请将命令中的 `dsh` 替换为 `pnpm dsh`。
 
@@ -85,6 +87,7 @@ dsh plugin --profile web exec dsh-orchestrator-install --force
 | 配置项 | 必填 | 说明 |
 | --- | --- | --- |
 | Agent ID | 是 | 用于子 Agent 工具名称和逐 Agent 运行配置的稳定身份，例如 `architect` 或 `reviewer`。 |
+| 启用状态 | 否 | 默认启用。禁用后保留配置，新会话不注册该 Agent 的委派工具；保存后创建新 Session 生效。 |
 | 模型 | 是 | 从 DSH 模型目录中选择的 Provider 和 Model。 |
 | 开发职责 | 否 | 展示给主 Agent 的简短路由摘要，用于选择 specialist；该字段不用于确定身份。 |
 | 子 Agent 提示词 | 否 | 发送给对应子 Agent 的独立 persona 提示词。旧配置未填写该字段时，会回退使用开发职责。 |
@@ -122,7 +125,7 @@ pnpm dsh plugin --profile web add -w D:/path/to/dsh-multi-model-orchestrator
 
 DSH Multi-model Orchestrator adds an Agent orchestration page to the DSH Web settings. You can configure any number of reusable specialist Agents, assign an existing DSH model to each one, and give each Agent a clear responsibility. These configured Agents are reusable specialist tools; the number of child tasks is determined by meaningful work and runtime capacity, not by the roster size.
 
-When a session uses the **Multi-model orchestrator** preset, every configured Agent becomes an independent subagent tool that the primary Agent can delegate work to.
+When a session uses the **Multi-model orchestrator** preset, every enabled Agent becomes an independent subagent tool that the primary Agent can delegate work to. Disabled Agents keep their model and prompt settings but do not receive delegations in new sessions.
 
 The primary Agent acts as the product owner and engineering manager rather than the default developer. For non-trivial work, it defines the outcome and acceptance criteria, decomposes non-overlapping scopes, and delegates development, investigation, testing, and review before implementation begins. Each child exclusively owns one cohesive task and acceptance target until it settles; the primary coordinates only non-overlapping work, waits on dependencies, integrates returned work, and performs final acceptance. Truly small one-step changes can stay local.
 
@@ -138,6 +141,8 @@ The primary Agent acts as the product owner and engineering manager rather than 
 - Split non-trivial work by complexity into any number of meaningful, non-overlapping tasks with independent acceptance targets, while avoiding artificial or overly granular splits.
 - Create a new child for each independent task, including when multiple tasks use the same specialist; run independent tasks concurrently within runtime capacity and serialize file, ownership, or dependency overlaps.
 - Keep each running session on the Agent configuration it started with.
+- Enable or disable each Agent independently; existing configurations default to enabled.
+- Expand or collapse each configuration. Collapsed rows retain the model summary, enable switch, and delete action; long lists scroll.
 - Retain standard project instructions, Skills, time context, plan approval, and result presentation; reminders are available when the Runtime provides the corresponding plugin.
 
 ### Requirements
@@ -156,7 +161,7 @@ dsh plugin --profile web add -w github:ToxicantX/dsh-multi-model-orchestrator
 
 Restart DSH Web after installation and refresh the browser. The plugin registers its Agent preset automatically when the Host starts. It also registers the legacy `orchestrator` preset ID so existing sessions created with that ID can resume while hiding official-name compatibility entries and generated Desktop upgrade or uninstall backups from Web selection lists. Backup files and historical identities are retained. Exact official pre-marker copies are adopted safely; customized user-managed presets are never overwritten and remain visible when given a distinct name.
 
-Existing settings are preserved during an upgrade, including rosters that previously exceeded 3 Agents. Every configured Agent is activated on startup, and the settings page keeps showing the complete roster for further edits.
+Existing settings are preserved during an upgrade, including rosters that previously exceeded 3 Agents. Agents without an explicit enabled state default to enabled. The settings page keeps the complete roster available for editing and toggling.
 
 When running DSH from a source checkout, use `pnpm dsh` instead of `dsh` in the command.
 
@@ -188,6 +193,7 @@ Reliability behavior: when no independent work remains, the primary uses foregro
 | Field | Required | Description |
 | --- | --- | --- |
 | Agent ID | Yes | Stable identity used for the subagent tool name and per-Agent runtime settings, such as `architect` or `reviewer`. |
+| Enabled | No | Defaults to enabled. Disabling retains the configuration and omits the Agent's delegation tool from new sessions. Save and create a new session to apply. |
 | Model | Yes | Provider and model selected from the DSH model catalog. |
 | Development scope | No | Short routing summary shown to the primary Agent when it chooses a specialist. It does not determine Agent identity. |
 | Child Agent prompt | No | Dedicated persona prompt sent to the selected child Agent. Legacy configurations without this field fall back to the development scope. |

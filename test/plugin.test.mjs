@@ -130,7 +130,7 @@ test('empty service snapshot mounts no children and explains configuration state
   const ctx = agentContext([])
   await apply(ctx)
   assert.equal(ctx.mounted.length, 0)
-  assert.match(ctx.sections[0].text, /No orchestrator specialists are configured/)
+  assert.match(ctx.sections[0].text, /No enabled orchestrator specialists are available/)
   assert.match(ctx.sections[0].text, /Settings > Orchestrator/)
 })
 
@@ -197,5 +197,5 @@ test('role guidance uses available capacity without duplicating or inventing wor
   assert.doesNotMatch(text, /up to the available specialist count/)
   assert.doesNotMatch(text, /Treat them as available execution capacity/)
   assert.doesNotMatch(text, /file ownership|At each step boundary|cancel or mark as non-blocking|fixed delegation ratio/u)
-  assert.match(roleGuidance([]), /No orchestrator specialists are configured/)
+  assert.match(roleGuidance([]), /No enabled orchestrator specialists are available/)
 })

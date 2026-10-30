@@ -16,7 +16,7 @@ export function specialistPersona(agent) {
 }
 
 export function roleGuidance(agents) {
-  if (agents.length === 0) return 'No orchestrator specialists are configured. Add agents in Settings > Orchestrator, then create a new session.'
+  if (agents.length === 0) return 'No enabled orchestrator specialists are available. Enable or add agents in Settings > Orchestrator, then create a new session.'
   return [
     'Available specialists:',
     ...agents.map(agent => '- subagent_' + agent.id + ': ' + agent.description),

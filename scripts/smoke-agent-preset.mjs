@@ -118,6 +118,7 @@ async function main() {
     description: `Own smoke scope ${index}.`,
     persona: `Specialist ${index} acceptance prompt.`,
   }))
+  agents.push({ id: 'paused', provider: 'offline-provider', model: 'offline-model', description: 'Paused specialist scope.', persona: 'Paused specialist persona.', enabled: false })
   try {
     provisionPreset({ target: join(home, '.agent-presets', 'multi-model-orchestrator') })
     provisionLegacyPreset({ primaryTarget: join(home, '.agent-presets', 'multi-model-orchestrator') })
@@ -175,7 +176,7 @@ async function main() {
     const settings = await settingsResponse.json()
     assert(Array.isArray(settings.agents), `plugin settings response is invalid: ${JSON.stringify(settings)}`)
     assert(settings.agents.length === agents.length && settings.agents.every((agent, index) =>
-      agent.id === agents[index].id && agent.model === agents[index].model && agent.persona === agents[index].persona
+      agent.id === agents[index].id && agent.model === agents[index].model && agent.persona === agents[index].persona && agent.enabled === agents[index].enabled
     ), 'configured specialist models or prompts were not preserved')
     const settingsUpdateResponse = await fetch(`${new URL(url).origin}/plugins/dsh-multi-model-orchestrator/settings`, {
       method: 'PUT',
@@ -187,6 +188,8 @@ async function main() {
       body: JSON.stringify({ agents })
     })
     assert(settingsUpdateResponse.status === 200, `plugin settings update failed: HTTP ${settingsUpdateResponse.status}`)
+    const savedSettings = await settingsUpdateResponse.json()
+    assert(savedSettings.agents.length === agents.length && savedSettings.agents.at(-1).enabled === false, 'saving dropped the disabled Agent')
     const roster = await rpc(url, cookie, 'agentPresets/list', {})
     assert(roster.presets.filter((preset) => preset.id === 'multi-model-orchestrator').length === 1, `primary preset missing: ${JSON.stringify(roster)}`)
     assert(roster.presets.every((preset) => preset.id !== 'orchestrator'), `managed legacy preset leaked into catalog: ${JSON.stringify(roster)}`)
@@ -209,6 +212,8 @@ async function main() {
     const primaryText = JSON.stringify(request)
     assert(primaryText.includes('primary coding orchestrator powered by the smoke-model-0 model'), 'primary persona missing or incorrect model name')
     assert(primaryText.includes('subagent_smoke-4'), 'fifth specialist missing from model context')
+    assert(!primaryText.includes('subagent_paused'), 'disabled Agent leaked into model tools')
+    assert(!primaryText.includes('Paused specialist scope.'), 'disabled Agent leaked into routing guidance')
     assert(primaryText.includes('run_code'), 'Code Mode presentation was lost')
     assert(primaryText.includes('present'), 'result presentation tool was lost')
     assert(!primaryText.includes('You are in plan mode.'), 'plan rules leaked into ordinary mode')
@@ -227,7 +232,8 @@ async function main() {
       const standardRequest = await probeRequest(url, cookie, standard.sessionId)
       checkContext(standardRequest, workspace)
       for (const tool of standardRequest.tools ?? []) {
-        if (['subagent', 'subagent_fork', 'workflow'].includes(tool.name)) continue
+        // Delegation is configured by this plugin; profile management is not part of its preset.
+        if (['subagent', 'subagent_fork', 'list_subagent_models', 'workflow', 'plugin_manager'].includes(tool.name)) continue
         assert(primaryText.includes(tool.name), 'standard tool missing from orchestrator: ' + tool.name)
       }
       const revision = createHash('sha256').update(specialistPersona(agents[0])).digest('hex')

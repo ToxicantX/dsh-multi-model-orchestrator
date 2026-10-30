@@ -34,6 +34,7 @@ export interface CatalogOption {
 
 export interface AgentInput {
   id: string
+  enabled?: boolean
   provider: string
   model: string
   description: string
@@ -69,6 +70,7 @@ function createRenderKey() {
 export function createAgentDraft(): AgentDraft {
   return {
     id: '',
+    enabled: true,
     provider: '',
     model: '',
     description: DEFAULT_AGENT_DESCRIPTION,
@@ -113,10 +115,10 @@ export function validateAgents(agents: readonly AgentInput[], options?: readonly
 
     if (!agent.provider || !agent.model) return validationMessage(t, 'modelRequired', 'Every agent must select a model.')
     const selected = options?.find(option => option.provider === agent.provider && option.model === agent.model)
-    if (options !== undefined && selected === undefined) {
+    if (agent.enabled !== false && options !== undefined && selected === undefined) {
       return validationMessage(t, 'modelUnavailable', 'Agent uses a model that is no longer available.', index)
     }
-    if (agent.reasoningEffort !== undefined && !selected?.reasoning?.efforts.some(effort => effort.id === agent.reasoningEffort)) {
+    if (agent.enabled !== false && agent.reasoningEffort !== undefined && !selected?.reasoning?.efforts.some(effort => effort.id === agent.reasoningEffort)) {
       return validationMessage(t, 'unsupportedReasoning', 'Agent has an unsupported reasoning effort.', index)
     }
     if (agent.maxTokens !== undefined && (!Number.isSafeInteger(agent.maxTokens) || agent.maxTokens < 1)) {
@@ -128,6 +130,7 @@ export function validateAgents(agents: readonly AgentInput[], options?: readonly
 export function cleanAgents(agents: readonly AgentInput[]): AgentSettings[] {
   return agents.map(agent => ({
     id: agent.id.trim(),
+    ...(agent.enabled === undefined ? {} : { enabled: agent.enabled }),
     provider: agent.provider,
     model: agent.model,
     ...(agent.description.trim() === '' ? {} : { description: agent.description.trim() }),

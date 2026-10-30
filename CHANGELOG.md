@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented here. This project follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [0.9.0] - 2026-10-30
+
+### Added
+
+- Add per-Agent enabled state. Disabled Agents retain their settings but are excluded from new-session delegation; existing configurations remain enabled.
+- Add collapsible Agent configuration rows with persistent model and status summaries, and a scrollable list to keep controls reachable with larger rosters.
+
 ## [0.8.3] - 2026-10-28
 
 ### Fixed

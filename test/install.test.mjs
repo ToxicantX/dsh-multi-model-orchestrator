@@ -405,6 +405,25 @@ test('host activates every configured Agent without truncating an oversized rost
   assert.deepEqual(await service.replaceAgents(legacy), legacy)
 })
 
+test('disabled Agents are saved but excluded from the active roster', async () => {
+  const roster = [agent('legacy'), agent('paused', { enabled: false, persona: 'Preserve me.' }), agent('active', { enabled: true })]
+  const fake = settingsContext({ agents: roster })
+  const service = new MultiModelOrchestratorSettings(fake.ctx, fake.config)
+  assert.deepEqual(service.configuredAgents(), roster)
+  assert.deepEqual(service.currentAgents(), [roster[0], roster[2]])
+  assert.deepEqual((await invokeSettingsRoute(service)).value.agents, roster)
+  assert.deepEqual(await service.replaceAgents(roster), roster)
+  assert.deepEqual(fake.replacements[0].next.agents, roster)
+  const enabled = roster.map(entry => ({ ...entry, enabled: true }))
+  assert.deepEqual(await service.replaceAgents(enabled), enabled)
+  assert.deepEqual(service.currentAgents(), enabled)
+  await service.replaceAgents(roster.map(entry => ({ ...entry, enabled: false })))
+  assert.deepEqual(service.currentAgents(), [])
+  for (const invalid of ['false', 0, null]) {
+    assert.throws(() => normalizeAgents([agent('invalid', { enabled: invalid })]), /enabled must be a boolean/)
+  }
+})
+
 test('host endpoint replaces only validated Agent settings', async () => {
   const fake = settingsContext({ agents: [agent('before')] })
   const service = new MultiModelOrchestratorSettings(fake.ctx, fake.config)
@@ -565,7 +584,7 @@ test('host onChange touches an existing preset path', async () => {
 test('package declares bundle and client integration exports', () => {
   assert.deepEqual(packageJson.dsh.bundle, { patch: './cordis.patch.yml' })
   assert.deepEqual(packageJson.dsh.client.inject, [
-    '@deepseek-ai/dsh-client-ui-settings', '@deepseek-ai/dsh-client-locale', '@deepseek-ai/dsh-api-remotes',
+    '@deepseek-ai/dsh-client-ui-settings', '@deepseek-ai/dsh-client-ui-primitives', '@deepseek-ai/dsh-client-locale', '@deepseek-ai/dsh-api-remotes',
   ])
   assert.equal(packageJson.exports['./host'], './host.js')
   assert.equal(packageJson.exports['./agent'], './agent.js')

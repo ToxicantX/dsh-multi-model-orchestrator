@@ -11,6 +11,7 @@ test('creates stable Agent draft keys with the shared default responsibility', (
   const second = createAgentDraft()
   assert.deepEqual({ ...first, renderKey: undefined }, {
     id: '',
+    enabled: true,
     provider: '',
     model: '',
     description: DEFAULT_AGENT_DESCRIPTION,
@@ -66,13 +67,22 @@ test('accepts any number of validated Agents', () => {
   assert.match(validateAgents([...roster, input('Bad ID')]), /invalid ID/)
 })
 
+test('disabled Agents retain settings and do not require an available model', () => {
+  const disabled = input('paused', { enabled: false, model: 'offline', persona: 'Retain this persona.', reasoningEffort: 'high' })
+  assert.equal(validateAgents([disabled], []), undefined)
+  assert.deepEqual(cleanAgents([disabled]), [{ id: 'paused', enabled: false, provider: 'p', model: 'offline', persona: 'Retain this persona.', reasoningEffort: 'high' }])
+  assert.match(validateAgents([{ ...disabled, enabled: true }], []), /no longer available/)
+  assert.match(validateAgents([disabled, disabled], []), /unique/)
+})
+
 test('settings UI appends Agents without a roster cap', async () => {
   const [section, client, config] = await Promise.all([
     readFile(new URL('../client/SettingsOrchestratorSection.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../client/index.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/config.js', import.meta.url), 'utf8'),
   ])
-  assert.match(section, /setAgents\(current => \[\.\.\.current, createAgentDraft\(\)\]\)/u)
+  assert.match(section, /const agent = createAgentDraft\(\)/u)
+  assert.match(section, /setAgents\(current => \[\.\.\.current, agent\]\)/u)
   assert.doesNotMatch(section, /MAX_AGENT_COUNT|legacyAgentLimit|agentCountExceeded/u)
   assert.doesNotMatch(client, /legacyAgentLimit|agentCountExceeded|Only the first 3 are active|当前仅启用前 3 个/u)
   assert.doesNotMatch(config, /value[.]length > MAX_AGENT_COUNT/u)

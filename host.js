@@ -14,6 +14,7 @@ const BACKUP_PRESET_ID = /^(?:multi-model-orchestrator|orchestrator)\.desktop-(?
 
 export const AgentSettingsSchema = z.object({
   id: z.string().required(),
+  enabled: z.boolean(),
   provider: z.string().required(),
   model: z.string().required(),
   description: z.string(),
@@ -74,7 +75,7 @@ export class MultiModelOrchestratorSettings {
   }
 
   currentAgents() {
-    return this.configuredAgents()
+    return this.configuredAgents().filter(agent => agent.enabled !== false)
   }
 
   specialistPreset(agent, persona) {
@@ -106,7 +107,7 @@ export class MultiModelOrchestratorSettings {
   async replaceAgents(agents) {
     const normalized = normalizeAgents(agents, { allowEmpty: true })
     await this.ctx.settings.replace(ORCHESTRATOR_SETTINGS_NAMESPACE, { agents: normalized })
-    return this.currentAgents()
+    return this.configuredAgents()
   }
 }
 

@@ -21,6 +21,9 @@ export function normalizeAgents(value, options = {}) {
     if (!AGENT_ID.test(id)) throw new Error('Invalid agent id: ' + id)
     if (ids.has(id)) throw new Error('Duplicate agent id: ' + id)
     ids.add(id)
+    if (entry.enabled !== undefined && typeof entry.enabled !== 'boolean') {
+      throw new Error('agents[' + index + '].enabled must be a boolean')
+    }
     const provider = requiredString(entry.provider, 'agents[' + index + '].provider')
     const model = requiredString(entry.model, 'agents[' + index + '].model')
     const description = entry.description === undefined
@@ -37,6 +40,7 @@ export function normalizeAgents(value, options = {}) {
     }
     return {
       id,
+      ...(entry.enabled === undefined ? {} : { enabled: entry.enabled }),
       provider,
       model,
       description,
